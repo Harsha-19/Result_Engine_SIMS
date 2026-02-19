@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="text-center mt-4">
+    <h3 class="fw-bold">Soundarya Institute of Management and Science</h3>
+
+    <p>
+        <strong>Department:</strong> {{ metadata.department }} |
+        <strong>Academic Year:</strong> {{ metadata.academic_year }}
+    </p>
+
+    <p>
+        <strong>Semester:</strong> {{ metadata.semester }} |
+        <strong>Exam Session:</strong> {{ metadata.exam_session }}
+    </p>
+
+    <p>
+        <strong>Date of Result Declaration:</strong> {{ metadata.result_date }}
+    </p>
+</div>
+
+
+<h3 class="mb-4">Result Overview</h3>
+
+<div class="row">
+
+    <div class="col-md-3">
+        <div class="card kpi-card shadow p-3 bg-primary text-white">
+            <h5>Total Students</h5>
+            <h2>{{ data.total_students }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card shadow p-3 bg-success text-white">
+            <h5>Pass %</h5>
+            <h2>{{ data.pass_percentage }}%</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card shadow p-3 bg-warning text-dark">
+            <h5>Topper %</h5>
+            <h2>{{ data.topper_percentage }}%</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card shadow p-3 bg-danger text-white">
+            <h5>Centums</h5>
+            <h2>{{ data.centum|length }}</h2>
+        </div>
+    </div>
+
+</div>
+
+<hr>
+
+<div class="row mt-4">
+
+    <div class="col-md-6">
+        <canvas id="passChart"></canvas>
+    </div>
+
+    <div class="col-md-6">
+        <canvas id="categoryChart"></canvas>
+    </div>
+
+</div>
+
+<hr>
+
+<h4 class="mt-4">Centum Achievers</h4>
+
+<table class="table table-bordered table-striped shadow">
+    <thead class="table-dark">
+        <tr>
+            <th>Name</th>
+            <th>USN</th>
+            <th>Subject</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data.centum %}
+        <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.usn }}</td>
+            <td>{{ row.subject }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+
+const resultData = JSON.parse('{{ data | tojson | safe }}');
+
+// PASS / FAIL BAR CHART
+new Chart(document.getElementById('passChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Passed', 'Failed'],
+        datasets: [{
+            data: [resultData.passed, resultData.failed],
+            backgroundColor: ['#28a745', '#dc3545']
+        }]
+    }
+});
+
+// CATEGORY PIE CHART
+new Chart(document.getElementById('categoryChart'), {
+    type: 'pie',
+    data: {
+        labels: ['General', 'SC', 'ST', 'OBC'],
+        datasets: [{
+            data: [
+                resultData.general,
+                resultData.sc,
+                resultData.st,
+                resultData.obc
+            ]
+        }]
+    }
+});
+
+</script>
+
+{% endblock %}

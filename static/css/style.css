@@ -1,0 +1,35 @@
+body {
+    background: #f4f6f9;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.sidebar {
+    width: 230px;
+    min-height: 100vh;
+}
+
+.sidebar-link {
+    display: block;
+    color: white;
+    text-decoration: none;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.sidebar-link:hover {
+    background: #495057;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+.kpi-card {
+    transition: 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+}

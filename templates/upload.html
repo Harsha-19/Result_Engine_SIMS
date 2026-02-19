@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="card shadow p-4">
+    <h4>Upload Files</h4>
+
+    <form action="/upload" method="post" enctype="multipart/form-data">
+
+        <div class="mb-3">
+            <label>Marks PDF</label>
+            <input type="file" name="marks" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label>Caste Excel</label>
+            <input type="file" name="caste" class="form-control" required>
+        </div>
+
+        <button class="btn btn-primary">Analyze</button>
+    </form>
+</div>
+
+{% endblock %}
