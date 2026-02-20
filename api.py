@@ -8,7 +8,7 @@ from docx import Document  # type: ignore[import]
 import json
 
 app = Flask(__name__)
-CORS(app)
+CORS (app, resources={r"/*": {"origins": "https://result-engine-sims.vercel.app"}},)
 
 UPLOAD_FOLDER = "uploads"
 EXPORT_FOLDER = "outputs"
