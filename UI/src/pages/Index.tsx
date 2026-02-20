@@ -77,7 +77,7 @@ const Index = () => {
         subjects: subjectMeta,
       };
 
-      const response = await fetch("http://127.0.0.1:5000/generate-report", {
+      const response = await fetch("https://your-render-app-name.onrender.com/generate-report", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
