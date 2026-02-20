@@ -86,7 +86,7 @@ def extract_excel_data(excel_path):
     # Detect header row containing USN
     for i in range(len(df_raw)):
         row_values = df_raw.iloc[i].astype(str).str.upper()
-        if any("USN" in cell for cell in row_values):
+        if any("USN" in str(cell) for cell in row_values):
             header_row_index = i
             break
 
