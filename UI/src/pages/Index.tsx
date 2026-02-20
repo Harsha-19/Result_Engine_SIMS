@@ -77,7 +77,7 @@ const Index = () => {
         subjects: subjectMeta,
       };
 
-      const response = await fetch("https://your-render-app-name.onrender.com/generate-report", {
+      const response = await fetch("https://result-engine-sims.onrender.com/generate-report", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,7 +127,7 @@ const Index = () => {
     formData.append("caste", casteFile);
 
     try {
-      const response = await fetch("https://your-render-app-name.onrender.com/upload", {
+      const response = await fetch("https://result-engine-sims.onrender.com/upload", {
         method: "POST",
         body: formData,
       });
