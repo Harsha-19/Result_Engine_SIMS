@@ -245,7 +245,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     header_row_index = None
     for i in range(len(raw_df)):
         row_values = raw_df.iloc[i].astype(str).str.upper()
-        if any("USN" in cell for cell in row_values):
+        if any("USN" in str(cell) for cell in row_values):
             header_row_index = i
             break
 
