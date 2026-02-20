@@ -5,3 +5,4 @@ openpyxl
 flask
 python-docx
 reportlab
+flask-cors
