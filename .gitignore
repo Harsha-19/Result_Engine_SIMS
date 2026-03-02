@@ -1,8 +1,28 @@
+# Node
 node_modules/
 UI/node_modules/
+
+# Python
 __pycache__/
-uploads/
-outputs/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Env
+venv/
 .env
+
+# Build folders
 dist/
 build/
+
+# Generated files
+uploads/
+outputs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Cursor
+.cursor/
