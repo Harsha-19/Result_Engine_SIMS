@@ -5,6 +5,10 @@ import os
 import pandas as pd
 from app.main import process_results
 from docx import Document  # type: ignore[import]
+from docx.shared import Inches  # type: ignore[import]
+from docx.oxml import OxmlElement  # type: ignore[import]
+from docx.oxml.ns import qn  # type: ignore[import]
+from docx.enum.text import WD_ALIGN_PARAGRAPH  # type: ignore[import]
 import json
 
 app = Flask(__name__)
@@ -53,10 +57,17 @@ def upload():
 
 # ===================== GENERATE DOCX =====================
 @app.route("/generate-report", methods=["GET", "POST"])
+@app.route("/download", methods=["GET", "POST"])
 def generate_doc_report():
 
     if "MARKS_PATH" not in app.config:
         return jsonify({"error": "No processed data available"}), 400
+
+    # Backward compatible: when missing, behave exactly like existing implementation.
+    # Supported: ?format=internal (default), ?format=public
+    download_format = (request.args.get("format") or "internal").strip().lower()
+    if download_format not in {"internal", "public"}:
+        download_format = "internal"
 
     # Prefer UI meta sent with this request (POST), fall back to stored one from upload
     ui_meta = app.config.get("UI_META")
@@ -91,6 +102,63 @@ def generate_doc_report():
     print("Template path:", template_path)
     print("Exists:",os.path.exists(template_path))
     doc = Document(template_path)
+
+    # ===================== WATERMARK (BOTH FORMATS) =====================
+    def _find_watermark_logo_path():
+        candidates = [
+            os.path.join(BASE_DIR, "static", "watermark.png"),
+            os.path.join(BASE_DIR, "static", "watermark.jpg"),
+            os.path.join(BASE_DIR, "watermark.png"),
+            os.path.join(BASE_DIR, "watermark.jpg"),
+            os.path.join(BASE_DIR, "UI", "public", "watermark.png"),
+            os.path.join(BASE_DIR, "UI", "public", "watermark.jpg"),
+        ]
+        for p in candidates:
+            if os.path.exists(p):
+                return p
+        return None
+
+    def add_footer_watermark(doc_obj, watermark_path: str):
+        # Adds a subtle watermark image in the footer (bottom-right) exactly once per document.
+        try:
+            # Prefer a single footer for the whole document.
+            if len(doc_obj.sections) > 1:
+                for i in range(1, len(doc_obj.sections)):
+                    doc_obj.sections[i].footer.is_linked_to_previous = True
+
+            footer = doc_obj.sections[0].footer
+
+            # Clear existing footer content (avoid stacking / expanding footer height).
+            for p in list(footer.paragraphs):
+                p._element.getparent().remove(p._element)
+            for t in list(footer.tables):
+                t._element.getparent().remove(t._element)
+
+            para = footer.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = para.add_run()
+            run.add_picture(watermark_path, width=Inches(1.0))
+        except Exception:
+            # Fail-safe: do not break report generation if watermark insertion fails
+            pass
+
+    def _enforce_read_only(doc_obj):
+        # "Read-only" without password (removable but meets the "if possible" requirement)
+        try:
+            settings_el = doc_obj.settings.element
+            existing = settings_el.xpath("./w:documentProtection")
+            dp = existing[0] if existing else OxmlElement("w:documentProtection")
+            dp.set(qn("w:edit"), "readOnly")
+            dp.set(qn("w:enforcement"), "1")
+            if not existing:
+                settings_el.append(dp)
+        except Exception:
+            pass
+
+    watermark_path = _find_watermark_logo_path()
+    if watermark_path:
+        add_footer_watermark(doc, watermark_path)
+    _enforce_read_only(doc)
 
     metadata = data["metadata"]
     summary = data["summary"]
@@ -241,13 +309,35 @@ def generate_doc_report():
                 break
 
 
-# Apply to all 3 blocks
-    fill_section("Total Number of Students Appeared", appeared)
-    fill_section("Total Number of Students Passed", passed)
-    fill_section("Out of Total", passed_60)
+# Apply to all 3 blocks (internal only)
+    if download_format != "public":
+        fill_section("Total Number of Students Appeared", appeared)
+        fill_section("Total Number of Students Passed", passed)
+        fill_section("Out of Total", passed_60)
+    else:
+        # PUBLIC: keep the section + table structure, but render the entire
+        # demographics table with empty numeric cells (no 0s, no totals).
+        try:
+            for row in demo_table.rows:
+                for cell in row.cells:
+                    if any(ch.isdigit() for ch in cell.text):
+                        cell.text = ""
+        except Exception:
+            pass
 
+        # If the template contains any explicit caste labels in this section,
+        # remove them as well (avoid "Caste:" with blank values).
+        def scrub_caste_labels(paragraphs):
+            for para in paragraphs:
+                for run in para.runs:
+                    if "caste" in run.text.lower():
+                        run.text = ""
 
-
+        scrub_caste_labels(doc.paragraphs)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    scrub_caste_labels(cell.paragraphs)
 
     # ============ CENTUM ============
     centum_table = doc.tables[-1]

@@ -110,6 +110,53 @@ const Index = () => {
     }
   };
 
+  const downloadPublicReport = async () => {
+    try {
+      const uiMeta = {
+        academic_year: headerMeta.academic_year,
+        department: headerMeta.department,
+        exam_session: headerMeta.exam_session,
+        // Use detected semester from backend metadata if available
+        semester: metadata?.semester || "",
+        result_date: headerMeta.result_date,
+        subjects: subjectMeta,
+      };
+
+      const response = await fetch(
+        "http://127.0.0.1:5000/generate-report?format=public",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ui_meta: uiMeta }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Approved_Result_Analysis_Public.docx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      toast({
+        title: "Download Started 📄",
+        description: "Report downloaded successfully.",
+      });
+    } catch {
+      toast({
+        title: "Download Failed ❌",
+        description: "Upload & Analyze first.",
+      });
+    }
+  };
+
   // ================= UPLOAD =================
   const handleUpload = async () => {
     if (!marksFile || !casteFile) {
@@ -192,6 +239,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
+      {/* Watermark overlay (non-interactive) */}
+      <div
+        className="fixed inset-0 z-0 flex items-center justify-center"
+        style={{ pointerEvents: "none", userSelect: "none" }}
+        aria-hidden="true"
+      >
+        <img
+          src="/watermark.PNG"
+          alt="watermark"
+          draggable={false}
+          className="fixed bottom-6 right-6 w-24 opacity-50 pointer-events-none select-none z-10"
+        />
+      </div>
+
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
         <div className="flex gap-4 justify-end flex-wrap">
@@ -242,7 +303,12 @@ const Index = () => {
 
           <Button onClick={downloadReport} className="flex items-center gap-2">
             <Download size={18} />
-            Download Report
+            Download Internal Result
+          </Button>
+
+          <Button onClick={downloadPublicReport} className="flex items-center gap-2" variant="secondary">
+            <Download size={18} />
+            Download Public Result
           </Button>
 
         </div>
