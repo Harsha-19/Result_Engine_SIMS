@@ -106,11 +106,11 @@ def generate_doc_report():
     # ===================== WATERMARK (BOTH FORMATS) =====================
     def _find_watermark_logo_path():
         candidates = [
-            os.path.join(BASE_DIR, "static", "watermark.png"),
+            os.path.join(BASE_DIR, "static", "watermark.PNG"),
             os.path.join(BASE_DIR, "static", "watermark.jpg"),
-            os.path.join(BASE_DIR, "watermark.png"),
+            os.path.join(BASE_DIR, "watermark.PNG"),
             os.path.join(BASE_DIR, "watermark.jpg"),
-            os.path.join(BASE_DIR, "UI", "public", "watermark.png"),
+            os.path.join(BASE_DIR, "UI", "public", "watermark.PNG"),
             os.path.join(BASE_DIR, "UI", "public", "watermark.jpg"),
         ]
         for p in candidates:
