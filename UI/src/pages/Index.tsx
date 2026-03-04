@@ -123,7 +123,7 @@ const Index = () => {
       };
 
       const response = await fetch(
-        "http://result-engine-sims.onrender.com/generate-report?format=public",
+        "https://result-engine-sims.onrender.com/generate-report?format=public",
         {
           method: "POST",
           headers: {
