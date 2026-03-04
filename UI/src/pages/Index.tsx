@@ -303,12 +303,12 @@ const Index = () => {
 
           <Button onClick={downloadReport} className="flex items-center gap-2">
             <Download size={18} />
-            Download Internal Result
+            Download Result (Caste-Based)
           </Button>
 
           <Button onClick={downloadPublicReport} className="flex items-center gap-2" variant="secondary">
             <Download size={18} />
-            Download Public Result
+            Download Result (Non-caste Based
           </Button>
 
         </div>
