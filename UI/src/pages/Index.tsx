@@ -220,7 +220,60 @@ const Index = () => {
     }
   };
 
-  return <div>FIXED ✅</div>;
+  return (
+    <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+        <div className="flex gap-4 justify-end flex-wrap">
+
+          <Button onClick={toggleTheme} variant="outline">
+            {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
+          </Button>
+
+          <label className="bg-primary text-white px-4 py-2 rounded cursor-pointer">
+            Marks PDF
+            <input
+              hidden
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setMarksFile(e.target.files?.[0] || null)}
+            />
+          </label>
+
+          <label className="bg-secondary px-4 py-2 rounded cursor-pointer">
+            Caste Excel
+            <input
+              hidden
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setCasteFile(e.target.files?.[0] || null)}
+            />
+          </label>
+
+          <Button onClick={handleUpload} disabled={loading}>
+            Upload & Analyze
+          </Button>
+
+          <Button onClick={downloadReport}>
+            Download Internal Result
+          </Button>
+
+          <Button onClick={downloadPublicReport} variant="secondary">
+            Download Public Result
+          </Button>
+
+        </div>
+
+        <Header metadata={metadata} onChange={setHeaderMeta} />
+        <OverallSummary summary={summary} />
+        <TopPerformers topPerformers={topPerformers} />
+        <SubjectAnalysis subjects={subjects} onMetaChange={setSubjectMeta} />
+        <DemographicAnalysis demographics={demographics} />
+        <CentumAchievers centum={centum} />
+
+      </div>
+    </div>
+  );
 };
 
 export default Index;
