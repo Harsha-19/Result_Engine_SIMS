@@ -5,8 +5,23 @@ from app.extractors.pdf_extractor import extract_pdf_data
 from app.services.summary_service import generate_summary
 import pdfplumber
 from datetime import datetime
+<<<<<<< HEAD
 
 def extract_pdf_metadata(pdf_path):
+=======
+import json
+import logging
+
+from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
+
+@measure_performance
+def extract_pdf_metadata(pdf_path):
+    # Check cache first
+    cache_key = f"meta_{get_file_stats(pdf_path)}"
+    cached = ResultCache.get(cache_key)
+    if cached: return cached["data"]
+
+>>>>>>> fb1fddd (upgrade in docx)
     metadata = {
         "academic_year": "",
         "department": "",
@@ -17,12 +32,17 @@ def extract_pdf_metadata(pdf_path):
 
     with pdfplumber.open(pdf_path) as pdf:
         text = ""
+<<<<<<< HEAD
+=======
+        # Only check first 2 pages for metadata to save time
+>>>>>>> fb1fddd (upgrade in docx)
         for page in pdf.pages[:2]:
             text += page.extract_text() or ""
 
     text = text.replace("\n", " ")
     text_upper = text.upper()
 
+<<<<<<< HEAD
     # ================= PROGRAM =================
     program_match = re.search(
         r'Program:\s*([A-Za-z\s]+?)\s+Semester:',
@@ -84,12 +104,52 @@ def extract_excel_data(excel_path):
     header_row_index = None
 
     # Detect header row containing USN
+=======
+    # Pre-compile regex for metadata if this were called frequently, 
+    # but since it's once per upload, standard re is fine here.
+    program_match = re.search(r'Program:\s*([A-Za-z\s]+?)\s+Semester:', text, re.I)
+    if program_match: metadata["department"] = program_match.group(1).strip()
+
+    semester_match = re.search(r'Semester:\s*([IVX]+)', text, re.I)
+    if semester_match: metadata["semester"] = semester_match.group(1).strip()
+
+    exam_match = re.search(r'Exam Month:\s*([A-Z/]+/\d{4})', text_upper)
+    if exam_match: metadata["exam_session"] = exam_match.group(1).title()
+
+    date_match = re.search(r'Print Date:\s*(\d{1,2}/\d{1,2}/\d{4})', text)
+    if date_match:
+        try:
+            dt = datetime.strptime(date_match.group(1), "%m/%d/%Y")
+            metadata["result_date"] = dt.strftime("%Y-%m-%d")
+        except: pass
+
+    if metadata["exam_session"]:
+        year_match = re.search(r'\d{4}', metadata["exam_session"])
+        if year_match:
+            yr = int(year_match.group())
+            metadata["academic_year"] = f"{yr-1}-{str(yr)[-2:]}"
+
+    ResultCache.set(cache_key, metadata)
+    return metadata
+
+
+@measure_performance
+def extract_excel_data(excel_path):
+    cache_key = f"excel_{get_file_stats(excel_path)}"
+    cached = ResultCache.get(cache_key)
+    if cached: return cached["data"]
+
+    df_raw = pd.read_excel(excel_path, header=None)
+    header_row_index = None
+
+>>>>>>> fb1fddd (upgrade in docx)
     for i in range(len(df_raw)):
         row_values = df_raw.iloc[i].astype(str).str.upper()
         if any("USN" in str(cell) for cell in row_values):
             header_row_index = i
             break
 
+<<<<<<< HEAD
     if header_row_index is None:
         raise ValueError("USN column not found in Excel file")
 
@@ -139,6 +199,88 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     for s in filtered_students:
         s.calculate_result()
 
+=======
+    if header_row_index is None: raise ValueError("USN column not found")
+    df = pd.read_excel(excel_path, header=header_row_index)
+
+    # Normalize columns
+    df.columns = df.columns.str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+
+    usn_col = next((c for c in df.columns if any(k in str(c) for k in ["USN", "REG", "ROLL"])), None)
+    gender_col = next((c for c in df.columns if any(k in str(c) for k in ["GENDER", "SEX"])), None)
+    cat_col = next((c for c in df.columns if any(k in str(c) for k in ["CATEGORY", "CASTE", "RESERVATION", "CAT"])), None)
+
+    if usn_col is None: raise ValueError("USN column not found in Excel")
+
+    student_data_map = {}
+    for _, row in df.iterrows():
+        raw_usn = str(row[usn_col]).strip().upper()
+        if not raw_usn or raw_usn == "NAN": continue
+        
+        student_data_map[raw_usn] = {
+            "gender": str(row[gender_col]).strip().upper() if gender_col else "NA",
+            "category": str(row[cat_col]).strip().upper() if cat_col else "NA"
+        }
+
+    # Debug sample
+    if student_data_map:
+        sample_usns = list(student_data_map.keys())[:3]
+        for usn in sample_usns:
+            logger.info(f"DEBUG: Excel Mapping USN={usn} -> {student_data_map[usn]}")
+    else:
+        logger.warning("DEBUG: Excel parsing resulted in EMPTY student_data_map")
+
+    res = (set(student_data_map.keys()), student_data_map)
+    ResultCache.set(cache_key, res)
+    return res
+
+# API INTERFACE
+@measure_performance
+def process_results(pdf_path, excel_path, ui_meta=None):
+    # Global Cache Key based on both files
+    cache_key = f"full_{get_file_stats(pdf_path)}_{get_file_stats(excel_path)}"
+    
+    # We only cache the CORE data. UI_META can change, so we merge it later.
+    cached_core = ResultCache.get(cache_key)
+    
+    if cached_core:
+        data = cached_core["data"]
+    else:
+        # Not in cache, perform full extraction
+        metadata = extract_pdf_metadata(pdf_path)
+        students = extract_pdf_data(pdf_path)
+        excel_usns, student_data_map = extract_excel_data(excel_path)
+
+        filtered_students = [s for s in students if s.usn.strip() in excel_usns]
+        for s in filtered_students: s.calculate_result()
+        
+        # Extract gender_map for existing summary_service compatibility
+        gender_map = {usn: info["gender"] for usn, info in student_data_map.items()}
+        
+        data = {
+            "raw_metadata": metadata,
+            "students": filtered_students,
+            "student_data_map": student_data_map,
+            "gender_map": gender_map,
+            "excel_usns": excel_usns
+        }
+        ResultCache.set(cache_key, data)
+
+    # Apply UI_META dynamically (No re-parsing!)
+    metadata = {
+        "academic_year": ui_meta.get("academic_year", "") if ui_meta else data["raw_metadata"]["academic_year"],
+        "department": ui_meta.get("department", "") if ui_meta else data["raw_metadata"]["department"],
+        "exam_session": ui_meta.get("exam_session", "") if ui_meta else data["raw_metadata"]["exam_session"],
+        "semester": ui_meta.get("semester", "") if ui_meta else data["raw_metadata"]["semester"],
+        "result_date": ui_meta.get("result_date", "") if ui_meta else data["raw_metadata"]["result_date"],
+    }
+    
+    filtered_students = data["students"]
+    gender_map = data["gender_map"]
+    
+    logger.info(f"DEBUG: Processing {len(filtered_students)} students for demographics")
+    
+>>>>>>> fb1fddd (upgrade in docx)
     # ================= 1. OVERALL SUMMARY =================
     summary = generate_summary(filtered_students, gender_map)
 
@@ -240,6 +382,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         sl_no += 1
 
     # ================= 4. DEMOGRAPHICS =================
+<<<<<<< HEAD
     raw_df = pd.read_excel(excel_path, header=None)
 
     header_row_index = None
@@ -260,6 +403,10 @@ def process_results(pdf_path, excel_path, ui_meta=None):
             "gender": str(row["GENDER"]).strip().upper(),
             "category": str(row["CATEGORY"]).strip().upper(),
         }
+=======
+    # REUSE the student_data_map from earlier extraction instead of re-reading file
+    caste_map = data["student_data_map"]
+>>>>>>> fb1fddd (upgrade in docx)
 
     categories = ["GENERAL", "SC", "ST", "OBC"]
     genders = ["MALE", "FEMALE"]
@@ -271,6 +418,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     passed = init_block()
     passed_60 = init_block()
 
+<<<<<<< HEAD
     for student in filtered_students:
         usn = student.usn.strip()
         if usn not in caste_map:
@@ -298,6 +446,47 @@ def process_results(pdf_path, excel_path, ui_meta=None):
             continue
 
         appeared[category][gender] += 1
+=======
+    counts = {cat: {g: 0 for g in genders} for cat in categories}
+
+    for student in filtered_students:
+        usn = student.usn.strip()
+        if usn not in caste_map:
+            # logger.debug(f"USN {usn} not found in Excel data")
+            continue
+
+        raw_category = caste_map[usn].get("category", "NA").upper()
+        raw_gender = caste_map[usn].get("gender", "NA").upper()
+
+        # Flexible Mapping (Refined)
+        category = None
+        # Normalize: Remove dots and multiple spaces
+        norm_cat = raw_category.replace(".", "").replace(" ", "")
+        
+        if any(k in raw_category for k in ["SCHEDULED CASTE", "SC"]) or norm_cat == "SC":
+            category = "SC"
+        elif any(k in raw_category for k in ["SCHEDULED TRIBE", "ST"]) or norm_cat == "ST":
+            category = "ST"
+        elif any(k in raw_category for k in ["CATEGORY", "CAT-", "OBC"]) or any(k in norm_cat for k in ["2A", "3A", "3B", "2B", "CAT1"]):
+            category = "OBC"
+        elif any(k in raw_category for k in ["GENERAL", "GM", "GEN"]) or norm_cat == "GM":
+            category = "GENERAL"
+        
+        gender = None
+        norm_gen = raw_gender.replace(" ", "")
+        if any(k in norm_gen for k in ["MALE", "BOY"]) or norm_gen == "M":
+            gender = "MALE"
+        elif any(k in norm_gen for k in ["FEMALE", "GIRL"]) or norm_gen == "F":
+            gender = "FEMALE"
+        
+        # LOG only failure for debugging
+        if not category or not gender:
+            # logger.debug(f"DEBUG: Skip student {usn} | Cat: '{raw_category}' mapped to {category} | Gen: '{raw_gender}' mapped to {gender}")
+            continue
+
+        appeared[category][gender] += 1
+        counts[category][gender] += 1
+>>>>>>> fb1fddd (upgrade in docx)
 
         if student.result == "PASS":
             passed[category][gender] += 1
@@ -305,6 +494,11 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         if student.result == "PASS" and student.percentage >= 60:
             passed_60[category][gender] += 1
 
+<<<<<<< HEAD
+=======
+    logger.info(f"DEBUG: Demographic Mapping Results -> {json.dumps(counts)}")
+
+>>>>>>> fb1fddd (upgrade in docx)
     demographics = {
         "appeared": appeared,
         "passed": passed,

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import React from "react";
+>>>>>>> fb1fddd (upgrade in docx)
 import { Header } from "@/components/ResultAnalysis/Header";
 import { OverallSummary } from "@/components/ResultAnalysis/OverallSummary";
 import { TopPerformers } from "@/components/ResultAnalysis/TopPerformers";
@@ -7,7 +11,12 @@ import { CentumAchievers } from "@/components/ResultAnalysis/Centum";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+<<<<<<< HEAD
 import React from "react";
+=======
+
+const API_URL = import.meta.env.VITE_API_URL || "https://result-engine-sims.onrender.com";
+>>>>>>> fb1fddd (upgrade in docx)
 
 const Index = () => {
   const { toast } = useToast();
@@ -77,7 +86,11 @@ const Index = () => {
         subjects: subjectMeta,
       };
 
+<<<<<<< HEAD
       const response = await fetch("https://result-engine-sims.onrender.com/generate-report", {
+=======
+      const response = await fetch(`${API_URL}/generate-report`, {
+>>>>>>> fb1fddd (upgrade in docx)
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +136,11 @@ const Index = () => {
       };
 
       const response = await fetch(
+<<<<<<< HEAD
         "https://result-engine-sims.onrender.com/generate-report?format=public",
+=======
+        `${API_URL}/generate-report?format=public`,
+>>>>>>> fb1fddd (upgrade in docx)
         {
           method: "POST",
           headers: {
@@ -173,14 +190,36 @@ const Index = () => {
     formData.append("marks", marksFile);
     formData.append("caste", casteFile);
 
+<<<<<<< HEAD
     try {
       const response = await fetch("https://result-engine-sims.onrender.com/upload", {
+=======
+    // Send form values along with upload
+    const uiMeta = {
+      academic_year: headerMeta.academic_year,
+      department: headerMeta.department,
+      exam_session: headerMeta.exam_session,
+      result_date: headerMeta.result_date,
+      subjects: subjectMeta,
+    };
+    formData.append("ui_meta", JSON.stringify(uiMeta));
+
+    try {
+      const response = await fetch(`${API_URL}/upload`, {
+>>>>>>> fb1fddd (upgrade in docx)
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
+<<<<<<< HEAD
       if (!response.ok) throw new Error();
+=======
+
+      if (!response.ok) {
+        throw new Error(data.error || "Server error");
+      }
+>>>>>>> fb1fddd (upgrade in docx)
 
       if (data.metadata) {
         setMetadata(data.metadata);
@@ -191,6 +230,10 @@ const Index = () => {
           result_date: data.metadata.result_date || "",
         });
       }
+<<<<<<< HEAD
+=======
+
+>>>>>>> fb1fddd (upgrade in docx)
       if (data.summary && typeof data.summary === "object") {
         const mapped = ["Boys", "Girls", "Total"].map((key) => ({
           category: key,
@@ -203,10 +246,17 @@ const Index = () => {
           totalFailed: data.summary[key]?.failed ?? 0,
           passPercentage: data.summary[key]?.pass_percentage ?? 0,
         }));
+<<<<<<< HEAD
       setSummary (mapped);
     } else {
       setSummary([]);
     }
+=======
+        setSummary(mapped);
+      } else {
+        setSummary([]);
+      }
+>>>>>>> fb1fddd (upgrade in docx)
 
       if (data.rankers) setTopPerformers(data.rankers);
       if (data.subjects) {
@@ -227,10 +277,19 @@ const Index = () => {
         description: "All data loaded successfully.",
       });
 
+<<<<<<< HEAD
     } catch {
       toast({
         title: "Upload Failed ❌",
         description: "Server error.",
+=======
+    } catch (err: any) {
+      toast({
+        title: "Upload Failed ❌",
+        description: err.message === "File already uploaded"
+          ? "👉 File already uploaded"
+          : "Server error. Please try again.",
+>>>>>>> fb1fddd (upgrade in docx)
       });
     } finally {
       setLoading(false);
@@ -241,14 +300,23 @@ const Index = () => {
     <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
       {/* Watermark overlay (non-interactive) */}
       <div
+<<<<<<< HEAD
         className="fixed bottom-6 right-6 opacity-10 pointer-events-none select-none z-0"
+=======
+        className="fixed inset-0 z-0 flex items-center justify-center"
+        style={{ pointerEvents: "none", userSelect: "none" }}
+>>>>>>> fb1fddd (upgrade in docx)
         aria-hidden="true"
       >
         <img
           src="/watermark.PNG"
           alt="watermark"
           draggable={false}
+<<<<<<< HEAD
           className="w-24"
+=======
+          className="fixed bottom-6 right-6 w-24 opacity-50 pointer-events-none select-none z-10"
+>>>>>>> fb1fddd (upgrade in docx)
         />
       </div>
 
@@ -263,6 +331,7 @@ const Index = () => {
           <label className="bg-primary text-white px-4 py-2 rounded cursor-pointer">
             Marks PDF
             <input type="file"
+<<<<<<< HEAD
             hidden
             accept=".pdf"
             onChange={(e) => {const file = e.target.files?.[0] || null; setMarksFile(file);
@@ -274,11 +343,26 @@ const Index = () => {
         }
       }}
     />
+=======
+              hidden
+              accept=".pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null; setMarksFile(file);
+                if (file) {
+                  toast({
+                    title: "Marks PDF Uploaded ✅",
+                    description: `${file.name} selected successfully.`,
+                  });
+                }
+              }}
+            />
+>>>>>>> fb1fddd (upgrade in docx)
           </label>
 
           <label className="bg-secondary px-4 py-2 rounded cursor-pointer">
             Caste Excel
             <input
+<<<<<<< HEAD
   type="file"
   hidden
   accept=".xlsx,.xls"
@@ -294,6 +378,23 @@ const Index = () => {
     }
   }}
 />
+=======
+              type="file"
+              hidden
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setCasteFile(file);
+
+                if (file) {
+                  toast({
+                    title: "Caste Excel Uploaded ✅",
+                    description: `${file.name} selected successfully.`,
+                  });
+                }
+              }}
+            />
+>>>>>>> fb1fddd (upgrade in docx)
           </label>
 
           <Button onClick={handleUpload} disabled={loading}>

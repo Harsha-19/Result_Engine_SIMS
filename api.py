@@ -11,8 +11,42 @@ from docx.oxml.ns import qn  # type: ignore[import]
 from docx.enum.text import WD_ALIGN_PARAGRAPH  # type: ignore[import]
 import json
 
+<<<<<<< HEAD
 app = Flask(__name__)
 CORS (app, resources={r"/*": {"origins": "https://result-engine-sims.vercel.app"}},)
+=======
+from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, get_file_hash, logger
+from app.services.worker_pool import run_in_background
+
+app = Flask(__name__)
+
+# --- IN-MEMORY DUPLICATE TRACKER ---
+PROCESSED_HASHES = set()
+
+# --- FEATURE FLAGS ---
+USE_ASYNC = os.environ.get("USE_ASYNC", "False").lower() == "true"
+ENABLE_CACHE = os.environ.get("ENABLE_CACHE", "True").lower() == "true"
+
+ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "https://result-engine-sims.vercel.app",
+    "http://localhost:5173",
+]
+
+# Allow overriding origins via environment variable
+extra_origins = os.environ.get("ORIGINS")
+if extra_origins:
+    ALLOWED_ORIGINS.extend(extra_origins.split(","))
+
+CORS(app, resources={
+    r"/*": {
+        "origins": ALLOWED_ORIGINS,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+>>>>>>> fb1fddd (upgrade in docx)
 
 UPLOAD_FOLDER = "uploads"
 EXPORT_FOLDER = "outputs"
@@ -24,8 +58,19 @@ os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
 
 @app.route("/")
+<<<<<<< HEAD
 def home():
     return jsonify({"message": "Result Engine API Running"})
+=======
+@measure_performance
+def home():
+    return jsonify({
+        "message": "Result Engine API Running",
+        "status": "Healthy",
+        "cache_enabled": ENABLE_CACHE,
+        "async_enabled": USE_ASYNC
+    })
+>>>>>>> fb1fddd (upgrade in docx)
 
 
 # ===================== UPLOAD =====================
@@ -38,10 +83,34 @@ def upload():
     if not marks_file or not caste_file:
         return jsonify({"error": "Both files required"}), 400
 
+<<<<<<< HEAD
     ui_meta = json.loads(ui_meta) if ui_meta else None
 
     marks_path = os.path.join(UPLOAD_FOLDER, marks_file.filename)
     caste_path = os.path.join(UPLOAD_FOLDER, caste_file.filename)
+=======
+    # DUPLICATE DETECTION (Option A: Hashing)
+    # Read bytes to compute hash without moving file cursor
+    marks_bytes = marks_file.read()
+    caste_bytes = caste_file.read()
+    
+    # Combined hash to detect if this specific pair was processed
+    current_hash = get_file_hash(marks_bytes + caste_bytes)
+    
+    # Seek back to beginning so save() works!
+    marks_file.seek(0)
+    caste_file.seek(0)
+    
+    if current_hash in PROCESSED_HASHES:
+        logger.info(f"Duplicate upload detected: {current_hash}")
+        return jsonify({"error": "File already uploaded"}), 400
+
+    ui_meta = json.loads(ui_meta) if ui_meta else None
+
+    # Sanitize names or use content-based names to avoid collisions
+    marks_path = os.path.join(UPLOAD_FOLDER, f"marks_{current_hash[:8]}.pdf")
+    caste_path = os.path.join(UPLOAD_FOLDER, f"caste_{current_hash[:8]}.xlsx")
+>>>>>>> fb1fddd (upgrade in docx)
 
     marks_file.save(marks_path)
     caste_file.save(caste_path)
@@ -51,6 +120,12 @@ def upload():
     app.config["UI_META"] = ui_meta
 
     results = process_results(marks_path, caste_path, ui_meta)
+<<<<<<< HEAD
+=======
+    
+    # Successful processing -> Record hash
+    PROCESSED_HASHES.add(current_hash)
+>>>>>>> fb1fddd (upgrade in docx)
 
     return jsonify(results)
 
@@ -155,9 +230,40 @@ def generate_doc_report():
         except Exception:
             pass
 
+<<<<<<< HEAD
     watermark_path = _find_watermark_logo_path()
     if watermark_path:
         add_footer_watermark(doc, watermark_path)
+=======
+    # ============ WATERMARK CONTROL ============
+    def strip_watermark_from_template(doc_obj):
+        """Programmatically removes common watermark shapes from headers/footers."""
+        try:
+            for section in doc_obj.sections:
+                # Search and remove from header
+                for header in [section.header, section.first_page_header, section.even_page_header]:
+                    if not header: continue
+                    for para in header.paragraphs:
+                        # Watermarks are often in VML shapes/pict elements
+                        if "PowerPlusWaterMarkObject" in para._element.xml or "Word.Picture" in para._element.xml:
+                             # This is a bit aggressive but targets common Word watermark IDs
+                             para._element.getparent().remove(para._element)
+                
+                # Search and remove from footer
+                for footer in [section.footer, section.first_page_footer, section.even_page_footer]:
+                    if not footer: continue
+                    for para in footer.paragraphs:
+                        if "PowerPlusWaterMarkObject" in para._element.xml:
+                             para._element.getparent().remove(para._element)
+        except Exception as e:
+            logger.warning(f"Failed to strip watermark from template: {e}")
+
+    # Remove any existing watermarks from the template itself
+    strip_watermark_from_template(doc)
+    
+    # ensure NO footer watermark is added via code
+    # (previous logic was already commented out)
+>>>>>>> fb1fddd (upgrade in docx)
     _enforce_read_only(doc)
 
     metadata = data["metadata"]
@@ -168,6 +274,7 @@ def generate_doc_report():
     centum = data["centum"]
 
     # ============ HEADER FILL ============
+<<<<<<< HEAD
     def replace_header_in_paragraphs(paragraphs):
         for para in paragraphs:
             for run in para.runs:
@@ -184,13 +291,71 @@ def generate_doc_report():
                     run.text = f"Date of Declaration of Result: {metadata.get('result_date','')}"
 
     # Replace in document body
+=======
+    raw_date = metadata.get('result_date', '')
+    formatted_date = raw_date
+    if raw_date and "-" in raw_date:
+        try:
+            dt = datetime.strptime(raw_date, "%Y-%m-%d")
+            formatted_date = dt.strftime("%d/%m/%Y")
+        except: pass
+
+    # Exact labels from USER requirements
+    header_mapping = {
+        "Academic Year": metadata.get('academic_year',''),
+        "Name of the Program": metadata.get('department',''),
+        "BU Examination month": metadata.get('exam_session',''),
+        "Semester": metadata.get('semester',''),
+        "Date of Declaration": formatted_date,
+    }
+
+    def replace_header_in_paragraphs(paragraphs):
+        for para in paragraphs:
+            para_text = para.text
+            for label, value in header_mapping.items():
+                if label.lower() in para_text.lower():
+                    # Found a paragraph with the target label.
+                    label_seen = False
+                    for run in para.runs:
+                        # Case A: Label and colon are in this run
+                        low_text = run.text.lower()
+                        if label.lower() in low_text:
+                            label_seen = True
+                            if ":" in run.text:
+                                # Replace everything after the FIRST colon in this run
+                                parts = run.text.split(":", 1)
+                                run.text = f"{parts[0]}: {value}"
+                                # We've filled it, but we might need to clear subsequent underscores
+                                continue
+                        
+                        # Case B: This run contains placeholders (underscores) following a label
+                        if label_seen and ("___" in run.text or run.text.strip() == ""):
+                            # If we haven't put the value in yet, or this is just extra padding
+                            if value and label.lower() in para_text.lower(): # double check
+                                # If the previous run didn't already contain the value
+                                if value not in para.text:
+                                    run.text = value
+                                else:
+                                    run.text = ""
+                            else:
+                                run.text = ""
+                        elif label_seen and run.text.strip().startswith(":"):
+                            # Handle colon in its own run
+                            run.text = f": {value}"
+                            label_seen = True # keep looking to clear extra underscores
+
+    # Replace in document body, headers, and all tables
+>>>>>>> fb1fddd (upgrade in docx)
     replace_header_in_paragraphs(doc.paragraphs)
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 replace_header_in_paragraphs(cell.paragraphs)
 
+<<<<<<< HEAD
     # Also replace in page headers (often where this academic info is placed)
+=======
+>>>>>>> fb1fddd (upgrade in docx)
     for section in doc.sections:
         replace_header_in_paragraphs(section.header.paragraphs)
         for table in section.header.tables:

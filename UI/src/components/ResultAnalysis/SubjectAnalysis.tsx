@@ -38,6 +38,7 @@ export const SubjectAnalysis: React.FC<Props> = ({ subjects, onMetaChange }) => 
       };
     });
     setLocalMeta(initial);
+<<<<<<< HEAD
 
     if (onMetaChange) {
       const meta = subjects.map((sub) => ({
@@ -71,6 +72,31 @@ export const SubjectAnalysis: React.FC<Props> = ({ subjects, onMetaChange }) => 
 
       return updated;
     });
+=======
+  }, [subjects]);
+
+  // Sync to parent whenever localMeta or subjects change
+  React.useEffect(() => {
+    if (onMetaChange) {
+      const meta = subjects.map((sub) => ({
+        subject: sub.subject,
+        section: localMeta[sub.id]?.section ?? sub.section ?? "",
+        faculty: localMeta[sub.id]?.faculty ?? sub.faculty ?? "",
+      }));
+      onMetaChange(meta);
+    }
+  }, [localMeta, subjects, onMetaChange]);
+
+  const updateMeta = (id: number, field: "section" | "faculty", value: string) => {
+    setLocalMeta((prev) => ({
+      ...prev,
+      [id]: {
+        section: prev[id]?.section ?? "",
+        faculty: prev[id]?.faculty ?? "",
+        [field]: value,
+      },
+    }));
+>>>>>>> fb1fddd (upgrade in docx)
   };
 
   return (
