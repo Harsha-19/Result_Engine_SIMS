@@ -11,10 +11,8 @@ from docx.oxml.ns import qn  # type: ignore[import]
 from docx.enum.text import WD_ALIGN_PARAGRAPH  # type: ignore[import]
 import json
 
-<<<<<<< HEAD
 app = Flask(__name__)
 CORS (app, resources={r"/*": {"origins": "https://result-engine-sims.vercel.app"}},)
-=======
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, get_file_hash, logger
 from app.services.worker_pool import run_in_background
 
@@ -46,7 +44,7 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
->>>>>>> fb1fddd (upgrade in docx)
+# fb1fddd (upgrade in docx)
 
 UPLOAD_FOLDER = "uploads"
 EXPORT_FOLDER = "outputs"
@@ -58,10 +56,8 @@ os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
 
 @app.route("/")
-<<<<<<< HEAD
 def home():
     return jsonify({"message": "Result Engine API Running"})
-=======
 @measure_performance
 def home():
     return jsonify({
@@ -70,7 +66,7 @@ def home():
         "cache_enabled": ENABLE_CACHE,
         "async_enabled": USE_ASYNC
     })
->>>>>>> fb1fddd (upgrade in docx)
+#fb1fddd (upgrade in docx)
 
 
 # ===================== UPLOAD =====================
@@ -83,12 +79,12 @@ def upload():
     if not marks_file or not caste_file:
         return jsonify({"error": "Both files required"}), 400
 
-<<<<<<< HEAD
+#
     ui_meta = json.loads(ui_meta) if ui_meta else None
 
     marks_path = os.path.join(UPLOAD_FOLDER, marks_file.filename)
     caste_path = os.path.join(UPLOAD_FOLDER, caste_file.filename)
-=======
+#
     # DUPLICATE DETECTION (Option A: Hashing)
     # Read bytes to compute hash without moving file cursor
     marks_bytes = marks_file.read()
@@ -110,7 +106,7 @@ def upload():
     # Sanitize names or use content-based names to avoid collisions
     marks_path = os.path.join(UPLOAD_FOLDER, f"marks_{current_hash[:8]}.pdf")
     caste_path = os.path.join(UPLOAD_FOLDER, f"caste_{current_hash[:8]}.xlsx")
->>>>>>> fb1fddd (upgrade in docx)
+# fb1fddd (upgrade in docx)
 
     marks_file.save(marks_path)
     caste_file.save(caste_path)
@@ -120,17 +116,17 @@ def upload():
     app.config["UI_META"] = ui_meta
 
     results = process_results(marks_path, caste_path, ui_meta)
-<<<<<<< HEAD
-=======
+#
+#
     
     # Successful processing -> Record hash
     PROCESSED_HASHES.add(current_hash)
->>>>>>> fb1fddd (upgrade in docx)
+# fb1fddd (upgrade in docx)
 
     return jsonify(results)
 
 
-# ===================== GENERATE DOCX =====================
+# ##======= GENERATE DOCX =====================
 @app.route("/generate-report", methods=["GET", "POST"])
 @app.route("/download", methods=["GET", "POST"])
 def generate_doc_report():
@@ -230,11 +226,11 @@ def generate_doc_report():
         except Exception:
             pass
 
-<<<<<<< HEAD
+#
     watermark_path = _find_watermark_logo_path()
     if watermark_path:
         add_footer_watermark(doc, watermark_path)
-=======
+#
     # ============ WATERMARK CONTROL ============
     def strip_watermark_from_template(doc_obj):
         """Programmatically removes common watermark shapes from headers/footers."""
@@ -263,7 +259,7 @@ def generate_doc_report():
     
     # ensure NO footer watermark is added via code
     # (previous logic was already commented out)
->>>>>>> fb1fddd (upgrade in docx)
+# fb1fddd (upgrade in docx)
     _enforce_read_only(doc)
 
     metadata = data["metadata"]
@@ -274,7 +270,7 @@ def generate_doc_report():
     centum = data["centum"]
 
     # ============ HEADER FILL ============
-<<<<<<< HEAD
+#
     def replace_header_in_paragraphs(paragraphs):
         for para in paragraphs:
             for run in para.runs:
@@ -291,7 +287,7 @@ def generate_doc_report():
                     run.text = f"Date of Declaration of Result: {metadata.get('result_date','')}"
 
     # Replace in document body
-=======
+#
     raw_date = metadata.get('result_date', '')
     formatted_date = raw_date
     if raw_date and "-" in raw_date:
@@ -345,17 +341,17 @@ def generate_doc_report():
                             label_seen = True # keep looking to clear extra underscores
 
     # Replace in document body, headers, and all tables
->>>>>>> fb1fddd (upgrade in docx)
+# fb1fddd (upgrade in docx)
     replace_header_in_paragraphs(doc.paragraphs)
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 replace_header_in_paragraphs(cell.paragraphs)
 
-<<<<<<< HEAD
+#
     # Also replace in page headers (often where this academic info is placed)
-=======
->>>>>>> fb1fddd (upgrade in docx)
+#
+# fb1fddd (upgrade in docx)
     for section in doc.sections:
         replace_header_in_paragraphs(section.header.paragraphs)
         for table in section.header.tables:
