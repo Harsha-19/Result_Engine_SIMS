@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import React from "react";
->>>>>>> fb1fddd (upgrade in docx)
 import { Header } from "@/components/ResultAnalysis/Header";
 import { OverallSummary } from "@/components/ResultAnalysis/OverallSummary";
 import { TopPerformers } from "@/components/ResultAnalysis/TopPerformers";
@@ -11,12 +8,8 @@ import { CentumAchievers } from "@/components/ResultAnalysis/Centum";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-<<<<<<< HEAD
-import React from "react";
-=======
 
 const API_URL = import.meta.env.VITE_API_URL || "https://result-engine-sims.onrender.com";
->>>>>>> fb1fddd (upgrade in docx)
 
 const Index = () => {
   const { toast } = useToast();
@@ -34,13 +27,7 @@ const Index = () => {
   const [loading, setLoading] = React.useState(false);
   const [theme, setTheme] = React.useState<"light" | "dark">("light");
 
-  // UI metadata to send to backend (header + subject-wise)
-  const [headerMeta, setHeaderMeta] = React.useState<{
-    academic_year: string;
-    department: string;
-    exam_session: string;
-    result_date: string;
-  }>({
+  const [headerMeta, setHeaderMeta] = React.useState({
     academic_year: "",
     department: "",
     exam_session: "",
@@ -51,7 +38,6 @@ const Index = () => {
     { subject: string; section: string; faculty: string }[]
   >([]);
 
-  // ================= THEME INIT =================
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
 
@@ -73,28 +59,20 @@ const Index = () => {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  // ================= DOWNLOAD DOCX =================
   const downloadReport = async () => {
     try {
       const uiMeta = {
         academic_year: headerMeta.academic_year,
         department: headerMeta.department,
         exam_session: headerMeta.exam_session,
-        // Use detected semester from backend metadata if available
         semester: metadata?.semester || "",
         result_date: headerMeta.result_date,
         subjects: subjectMeta,
       };
 
-<<<<<<< HEAD
-      const response = await fetch("https://result-engine-sims.onrender.com/generate-report", {
-=======
       const response = await fetch(`${API_URL}/generate-report`, {
->>>>>>> fb1fddd (upgrade in docx)
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ui_meta: uiMeta }),
       });
 
@@ -110,16 +88,10 @@ const Index = () => {
       a.click();
       a.remove();
 
-      toast({
-        title: "Download Started 📄",
-        description: "Report downloaded successfully.",
-      });
+      toast({ title: "Download Started 📄", description: "Report downloaded successfully." });
 
     } catch {
-      toast({
-        title: "Download Failed ❌",
-        description: "Upload & Analyze first.",
-      });
+      toast({ title: "Download Failed ❌", description: "Upload & Analyze first." });
     }
   };
 
@@ -129,26 +101,16 @@ const Index = () => {
         academic_year: headerMeta.academic_year,
         department: headerMeta.department,
         exam_session: headerMeta.exam_session,
-        // Use detected semester from backend metadata if available
         semester: metadata?.semester || "",
         result_date: headerMeta.result_date,
         subjects: subjectMeta,
       };
 
-      const response = await fetch(
-<<<<<<< HEAD
-        "https://result-engine-sims.onrender.com/generate-report?format=public",
-=======
-        `${API_URL}/generate-report?format=public`,
->>>>>>> fb1fddd (upgrade in docx)
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ui_meta: uiMeta }),
-        }
-      );
+      const response = await fetch(`${API_URL}/generate-report?format=public`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ui_meta: uiMeta }),
+      });
 
       if (!response.ok) throw new Error("Failed");
 
@@ -162,25 +124,16 @@ const Index = () => {
       a.click();
       a.remove();
 
-      toast({
-        title: "Download Started 📄",
-        description: "Report downloaded successfully.",
-      });
+      toast({ title: "Download Started 📄", description: "Report downloaded successfully." });
+
     } catch {
-      toast({
-        title: "Download Failed ❌",
-        description: "Upload & Analyze first.",
-      });
+      toast({ title: "Download Failed ❌", description: "Upload & Analyze first." });
     }
   };
 
-  // ================= UPLOAD =================
   const handleUpload = async () => {
     if (!marksFile || !casteFile) {
-      toast({
-        title: "Missing Files ❌",
-        description: "Please select both files.",
-      });
+      toast({ title: "Missing Files ❌", description: "Please select both files." });
       return;
     }
 
@@ -190,11 +143,6 @@ const Index = () => {
     formData.append("marks", marksFile);
     formData.append("caste", casteFile);
 
-<<<<<<< HEAD
-    try {
-      const response = await fetch("https://result-engine-sims.onrender.com/upload", {
-=======
-    // Send form values along with upload
     const uiMeta = {
       academic_year: headerMeta.academic_year,
       department: headerMeta.department,
@@ -206,20 +154,15 @@ const Index = () => {
 
     try {
       const response = await fetch(`${API_URL}/upload`, {
->>>>>>> fb1fddd (upgrade in docx)
         method: "POST",
         body: formData,
       });
 
       const data = await response.json();
-<<<<<<< HEAD
-      if (!response.ok) throw new Error();
-=======
 
       if (!response.ok) {
         throw new Error(data.error || "Server error");
       }
->>>>>>> fb1fddd (upgrade in docx)
 
       if (data.metadata) {
         setMetadata(data.metadata);
@@ -230,10 +173,7 @@ const Index = () => {
           result_date: data.metadata.result_date || "",
         });
       }
-<<<<<<< HEAD
-=======
 
->>>>>>> fb1fddd (upgrade in docx)
       if (data.summary && typeof data.summary === "object") {
         const mapped = ["Boys", "Girls", "Total"].map((key) => ({
           category: key,
@@ -246,17 +186,10 @@ const Index = () => {
           totalFailed: data.summary[key]?.failed ?? 0,
           passPercentage: data.summary[key]?.pass_percentage ?? 0,
         }));
-<<<<<<< HEAD
-      setSummary (mapped);
-    } else {
-      setSummary([]);
-    }
-=======
         setSummary(mapped);
       } else {
         setSummary([]);
       }
->>>>>>> fb1fddd (upgrade in docx)
 
       if (data.rankers) setTopPerformers(data.rankers);
       if (data.subjects) {
@@ -272,168 +205,22 @@ const Index = () => {
       if (data.demographics) setDemographics(data.demographics);
       if (data.centum) setCentum(data.centum);
 
-      toast({
-        title: "Analysis Complete 🎉",
-        description: "All data loaded successfully.",
-      });
+      toast({ title: "Analysis Complete 🎉", description: "All data loaded successfully." });
 
-<<<<<<< HEAD
-    } catch {
-      toast({
-        title: "Upload Failed ❌",
-        description: "Server error.",
-=======
     } catch (err: any) {
       toast({
         title: "Upload Failed ❌",
-        description: err.message === "File already uploaded"
-          ? "👉 File already uploaded"
-          : "Server error. Please try again.",
->>>>>>> fb1fddd (upgrade in docx)
+        description:
+          err.message === "File already uploaded"
+            ? "👉 File already uploaded"
+            : "Server error. Please try again.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
-      {/* Watermark overlay (non-interactive) */}
-      <div
-<<<<<<< HEAD
-        className="fixed bottom-6 right-6 opacity-10 pointer-events-none select-none z-0"
-=======
-        className="fixed inset-0 z-0 flex items-center justify-center"
-        style={{ pointerEvents: "none", userSelect: "none" }}
->>>>>>> fb1fddd (upgrade in docx)
-        aria-hidden="true"
-      >
-        <img
-          src="/watermark.PNG"
-          alt="watermark"
-          draggable={false}
-<<<<<<< HEAD
-          className="w-24"
-=======
-          className="fixed bottom-6 right-6 w-24 opacity-50 pointer-events-none select-none z-10"
->>>>>>> fb1fddd (upgrade in docx)
-        />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-
-        <div className="flex gap-4 justify-end flex-wrap">
-
-          <Button onClick={toggleTheme} variant="outline">
-            {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
-          </Button>
-
-          <label className="bg-primary text-white px-4 py-2 rounded cursor-pointer">
-            Marks PDF
-            <input type="file"
-<<<<<<< HEAD
-            hidden
-            accept=".pdf"
-            onChange={(e) => {const file = e.target.files?.[0] || null; setMarksFile(file);
-          if (file) {
-            toast({
-            title: "Marks PDF Uploaded ✅",
-            description: `${file.name} selected successfully.`,
-          });
-        }
-      }}
-    />
-=======
-              hidden
-              accept=".pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null; setMarksFile(file);
-                if (file) {
-                  toast({
-                    title: "Marks PDF Uploaded ✅",
-                    description: `${file.name} selected successfully.`,
-                  });
-                }
-              }}
-            />
->>>>>>> fb1fddd (upgrade in docx)
-          </label>
-
-          <label className="bg-secondary px-4 py-2 rounded cursor-pointer">
-            Caste Excel
-            <input
-<<<<<<< HEAD
-  type="file"
-  hidden
-  accept=".xlsx,.xls"
-  onChange={(e) => {
-    const file = e.target.files?.[0] || null;
-    setCasteFile(file);
-
-    if (file) {
-      toast({
-        title: "Caste Excel Uploaded ✅",
-        description: `${file.name} selected successfully.`,
-      });
-    }
-  }}
-/>
-=======
-              type="file"
-              hidden
-              accept=".xlsx,.xls"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                setCasteFile(file);
-
-                if (file) {
-                  toast({
-                    title: "Caste Excel Uploaded ✅",
-                    description: `${file.name} selected successfully.`,
-                  });
-                }
-              }}
-            />
->>>>>>> fb1fddd (upgrade in docx)
-          </label>
-
-          <Button onClick={handleUpload} disabled={loading}>
-            Upload & Analyze
-          </Button>
-
-          <Button onClick={downloadReport} className="flex items-center gap-2">
-            <Download size={18} />
-            Download Internal Result
-          </Button>
-
-          <Button onClick={downloadPublicReport} className="flex items-center gap-2" variant="secondary">
-            <Download size={18} />
-            Download Public Result
-          </Button>
-
-        </div>
-
-        <Header metadata={metadata} onChange={setHeaderMeta} />
-        <OverallSummary summary={summary} />
-        <TopPerformers topPerformers={topPerformers} />
-        <SubjectAnalysis subjects={subjects} onMetaChange={setSubjectMeta} />
-        <DemographicAnalysis demographics={demographics} />
-        <CentumAchievers centum={centum} />
-
-      </div>
-
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-10 flex flex-col items-center gap-5">
-            <div className="h-14 w-14 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xl font-semibold">
-              Analyzing Results...
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <div>FIXED ✅</div>;
 };
 
 export default Index;
