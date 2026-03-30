@@ -241,15 +241,14 @@ const Index = () => {
     <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
       {/* Watermark overlay (non-interactive) */}
       <div
-        className="fixed inset-0 z-0 flex items-center justify-center"
-        style={{ pointerEvents: "none", userSelect: "none" }}
+        className="fixed bottom-6 right-6 opacity-10 pointer-events-none select-none z-0"
         aria-hidden="true"
       >
         <img
           src="/watermark.PNG"
           alt="watermark"
           draggable={false}
-          className="fixed bottom-6 right-6 w-24 opacity-50 pointer-events-none select-none z-10"
+          className="w-24"
         />
       </div>
 
