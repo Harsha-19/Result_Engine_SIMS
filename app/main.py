@@ -5,12 +5,12 @@ from app.extractors.pdf_extractor import extract_pdf_data
 from app.services.summary_service import generate_summary
 import pdfplumber
 from datetime import datetime
-<<<<<<< HEAD
+
 
 def extract_pdf_metadata(pdf_path):
-=======
-import json
-import logging
+
+    import json
+    import logging
 
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
 
@@ -21,7 +21,6 @@ def extract_pdf_metadata(pdf_path):
     cached = ResultCache.get(cache_key)
     if cached: return cached["data"]
 
->>>>>>> fb1fddd (upgrade in docx)
     metadata = {
         "academic_year": "",
         "department": "",
@@ -32,17 +31,17 @@ def extract_pdf_metadata(pdf_path):
 
     with pdfplumber.open(pdf_path) as pdf:
         text = ""
-<<<<<<< HEAD
-=======
+
+
         # Only check first 2 pages for metadata to save time
->>>>>>> fb1fddd (upgrade in docx)
+
         for page in pdf.pages[:2]:
             text += page.extract_text() or ""
 
     text = text.replace("\n", " ")
     text_upper = text.upper()
 
-<<<<<<< HEAD
+
     # ================= PROGRAM =================
     program_match = re.search(
         r'Program:\s*([A-Za-z\s]+?)\s+Semester:',
@@ -104,7 +103,6 @@ def extract_excel_data(excel_path):
     header_row_index = None
 
     # Detect header row containing USN
-=======
     # Pre-compile regex for metadata if this were called frequently, 
     # but since it's once per upload, standard re is fine here.
     program_match = re.search(r'Program:\s*([A-Za-z\s]+?)\s+Semester:', text, re.I)
@@ -142,14 +140,12 @@ def extract_excel_data(excel_path):
     df_raw = pd.read_excel(excel_path, header=None)
     header_row_index = None
 
->>>>>>> fb1fddd (upgrade in docx)
     for i in range(len(df_raw)):
-        row_values = df_raw.iloc[i].astype(str).str.upper()
+        row_values = df_raw.iloc[i].type(str).str.upper()
         if any("USN" in str(cell) for cell in row_values):
             header_row_index = i
             break
 
-<<<<<<< HEAD
     if header_row_index is None:
         raise ValueError("USN column not found in Excel file")
 
@@ -199,7 +195,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     for s in filtered_students:
         s.calculate_result()
 
-=======
+
     if header_row_index is None: raise ValueError("USN column not found")
     df = pd.read_excel(excel_path, header=header_row_index)
 
@@ -280,7 +276,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     
     logger.info(f"DEBUG: Processing {len(filtered_students)} students for demographics")
     
->>>>>>> fb1fddd (upgrade in docx)
+
     # ================= 1. OVERALL SUMMARY =================
     summary = generate_summary(filtered_students, gender_map)
 
@@ -382,7 +378,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         sl_no += 1
 
     # ================= 4. DEMOGRAPHICS =================
-<<<<<<< HEAD
+
     raw_df = pd.read_excel(excel_path, header=None)
 
     header_row_index = None
@@ -403,11 +399,9 @@ def process_results(pdf_path, excel_path, ui_meta=None):
             "gender": str(row["GENDER"]).strip().upper(),
             "category": str(row["CATEGORY"]).strip().upper(),
         }
-=======
+
     # REUSE the student_data_map from earlier extraction instead of re-reading file
     caste_map = data["student_data_map"]
->>>>>>> fb1fddd (upgrade in docx)
-
     categories = ["GENERAL", "SC", "ST", "OBC"]
     genders = ["MALE", "FEMALE"]
 
@@ -417,8 +411,6 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     appeared = init_block()
     passed = init_block()
     passed_60 = init_block()
-
-<<<<<<< HEAD
     for student in filtered_students:
         usn = student.usn.strip()
         if usn not in caste_map:
@@ -446,7 +438,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
             continue
 
         appeared[category][gender] += 1
-=======
+
     counts = {cat: {g: 0 for g in genders} for cat in categories}
 
     for student in filtered_students:
@@ -486,7 +478,6 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
         appeared[category][gender] += 1
         counts[category][gender] += 1
->>>>>>> fb1fddd (upgrade in docx)
 
         if student.result == "PASS":
             passed[category][gender] += 1
@@ -494,11 +485,11 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         if student.result == "PASS" and student.percentage >= 60:
             passed_60[category][gender] += 1
 
-<<<<<<< HEAD
-=======
+
+
     logger.info(f"DEBUG: Demographic Mapping Results -> {json.dumps(counts)}")
 
->>>>>>> fb1fddd (upgrade in docx)
+
     demographics = {
         "appeared": appeared,
         "passed": passed,

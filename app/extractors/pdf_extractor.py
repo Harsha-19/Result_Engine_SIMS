@@ -3,7 +3,6 @@ import re
 from app.models.student_model import Student
 
 
-<<<<<<< HEAD
 def extract_pdf_data(pdf_path):
     students = []
 
@@ -40,7 +39,7 @@ def extract_pdf_data(pdf_path):
             raw_line = re.sub(r"\d+\s*\+\s*\d+.*", "", raw_line).strip()
             raw_line = re.sub(r"\b(BSC|BCA|FAD|ID)\b$", "", raw_line).strip()
 
-=======
+
 # 🔹 Pre-compiled patterns for speed
 USN_PATTERN = re.compile(r"(U\d{2}[A-Z]{2}\d{2}S\d{4})")
 NAME_PATTERN = re.compile(r"Student Name:\s*(.+)")
@@ -86,12 +85,12 @@ def extract_pdf_data(pdf_path):
             raw_line = DIR_JUNK_PATTERN.split(raw_line)[0].strip()
             raw_line = MARK_JUNK_PATTERN.sub("", raw_line).strip()
             raw_line = PROGRAMS_PATTERN.sub("", raw_line).strip()
->>>>>>> fb1fddd (upgrade in docx)
+
             student.name = raw_line
         else:
             student.name = ""
 
-<<<<<<< HEAD
+
         # =========================================================
         # 🔥 SUBJECT + MARKS EXTRACTION (CORRECT VERSION)
         # =========================================================
@@ -115,7 +114,6 @@ def extract_pdf_data(pdf_path):
         student.calculate_totals()
         student.calculate_result()
 
-=======
         # --- SUBJECT EXTRACTION ---
         subjects_found = SUBJECT_PARSE_PATTERN.findall(block)
         for code, sub_name, cia, see, max_m, tot in subjects_found:
@@ -124,7 +122,6 @@ def extract_pdf_data(pdf_path):
         # --- CALCULATE ---
         student.calculate_totals()
         student.calculate_result()
->>>>>>> fb1fddd (upgrade in docx)
         students.append(student)
 
     return students
