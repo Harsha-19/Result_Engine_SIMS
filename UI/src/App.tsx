@@ -23,7 +23,7 @@ const App = () => (
       <img
         src="/watermark.PNG"
         alt="Watermark"
-        className="fixed bottom-8 right-8 w-32 md:w-48 opacity-70 select-none pointer-events-none z-[9999] print:hidden transition-all duration-500 hover:opacity-40"
+        className="fixed bottom-6 right-6 w-10 h-10 md:w-16 md:h-16 object-contain opacity-50 select-none pointer-events-none z-[9999] print:hidden transition-all duration-500 hover:opacity-80"
         draggable={false}
         onContextMenu={(e) => e.preventDefault()}
       />
