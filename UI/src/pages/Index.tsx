@@ -6,8 +6,10 @@ import { SubjectAnalysis } from "@/components/ResultAnalysis/SubjectAnalysis";
 import { DemographicAnalysis } from "@/components/ResultAnalysis/DemographicAnalysis";
 import { CentumAchievers } from "@/components/ResultAnalysis/Centum";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, LayoutDashboard, UserCheck, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CasteFilterUpload } from "@/components/CasteProcessor/CasteFilterUpload";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://result-engine-sims.onrender.com";
 
@@ -221,55 +223,95 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative">
+    <div className="min-h-screen transition-colors duration-300 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative font-sans">
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        <div className="flex gap-4 justify-end flex-wrap">
+        <Tabs defaultValue="dashboard" className="w-full">
+          <div className="flex items-center justify-between flex-wrap gap-6 mb-10 pb-6 border-b border-gray-100 dark:border-gray-800">
+             <div className="space-y-1">
+                <h1 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">Academic Result Intelligence</h1>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Enterprise Processing Suite v2.0</p>
+             </div>
 
-          <Button onClick={toggleTheme} variant="outline">
-            {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
-          </Button>
+             <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
+                <TabsList className="bg-transparent h-auto p-0 gap-1 border-none shadow-none">
+                  <TabsTrigger 
+                    value="dashboard" 
+                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" /> Comprehensive Analysis
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="caste" 
+                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Category Processing
+                  </TabsTrigger>
+                </TabsList>
+                
+                <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+                
+                <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all">
+                  {theme === "dark" ? "☀" : "🌙"}
+                </Button>
+             </div>
+          </div>
 
-          <label className="bg-primary text-white px-4 py-2 rounded cursor-pointer">
-            Marks PDF
-            <input
-              hidden
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setMarksFile(e.target.files?.[0] || null)}
-            />
-          </label>
+          <TabsContent value="dashboard" className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex gap-4 justify-end flex-wrap bg-gray-50/50 dark:bg-gray-900/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 backdrop-blur-sm">
+              <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest cursor-pointer transition-all shadow-lg shadow-indigo-100 dark:shadow-none min-w-[140px] text-center">
+                1. Marks PDF
+                <input
+                  hidden
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setMarksFile(e.target.files?.[0] || null)}
+                />
+              </label>
 
-          <label className="bg-secondary px-4 py-2 rounded cursor-pointer">
-            Caste Excel
-            <input
-              hidden
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => setCasteFile(e.target.files?.[0] || null)}
-            />
-          </label>
+              <label className="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest cursor-pointer transition-all shadow-lg shadow-amber-100 dark:shadow-none min-w-[140px] text-center">
+                2. Caste Excel
+                <input
+                  hidden
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setCasteFile(e.target.files?.[0] || null)}
+                />
+              </label>
 
-          <Button onClick={handleUpload} disabled={loading}>
-            Upload & Analyze
-          </Button>
+              <Button 
+                onClick={handleUpload} 
+                disabled={loading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 dark:shadow-none min-w-[160px]"
+              >
+                {loading ? "Processing..." : "Run Extraction"}
+              </Button>
 
-          <Button onClick={downloadReport}>
-            Download Internal Result
-          </Button>
+              <div className="w-px h-8 bg-gray-200 dark:bg-gray-800 mx-2 hidden sm:block" />
 
-          <Button onClick={downloadPublicReport} variant="secondary">
-            Download Public Result
-          </Button>
+              <Button onClick={downloadReport} variant="outline" className="rounded-xl font-bold text-xs uppercase tracking-widest border-gray-200 hover:bg-gray-50 dark:border-gray-800">
+                <Download className="w-4 h-4 mr-2" /> Internal Doc
+              </Button>
 
-        </div>
+              <Button onClick={downloadPublicReport} variant="outline" className="rounded-xl font-bold text-xs uppercase tracking-widest border-gray-200 hover:bg-gray-50 dark:border-gray-800">
+                <Download className="w-4 h-4 mr-2" /> Public Doc
+              </Button>
+            </div>
 
-        <Header metadata={metadata} onChange={setHeaderMeta} />
-        <OverallSummary summary={summary} />
-        <TopPerformers topPerformers={topPerformers} />
-        <SubjectAnalysis subjects={subjects} onMetaChange={setSubjectMeta} />
-        <DemographicAnalysis demographics={demographics} />
-        <CentumAchievers centum={centum} />
+            <Header metadata={metadata} onChange={setHeaderMeta} />
+            <div className="grid grid-cols-1 gap-10">
+              <OverallSummary summary={summary} />
+              <TopPerformers topPerformers={topPerformers} />
+              <SubjectAnalysis subjects={subjects} onMetaChange={setSubjectMeta} />
+              <DemographicAnalysis demographics={demographics} />
+              <CentumAchievers centum={centum} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="caste" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <CasteFilterUpload />
+          </TabsContent>
+        </Tabs>
 
       </div>
     </div>

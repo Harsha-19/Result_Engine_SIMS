@@ -10,6 +10,9 @@ from docx.oxml import OxmlElement  # type: ignore[import]
 from docx.oxml.ns import qn  # type: ignore[import]
 from docx.enum.text import WD_ALIGN_PARAGRAPH  # type: ignore[import]
 import json
+import time
+from werkzeug.utils import secure_filename
+from app.extractors.pdf_extractor import extract_pdf_data
 
 
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, get_file_hash, logger
@@ -64,6 +67,94 @@ def home():
         "cache_enabled": ENABLE_CACHE,
         "async_enabled": USE_ASYNC
     })
+
+
+
+# --- CASTE-BASED FILTERING SYSTEM ---
+ALLOWED_CASTES = ["General", "OBC", "SC", "ST"]
+
+@app.route("/upload-caste-filter", methods=["POST"])
+def upload_caste_filter():
+    file = request.files.get("file")
+    caste = request.form.get("caste")
+
+    # Validation
+    if not file or not file.filename.lower().endswith(".pdf"):
+        return jsonify({"success": False, "message": "Only PDF files are allowed"}), 400
+    
+    if not caste or caste not in ALLOWED_CASTES:
+        return jsonify({"success": False, "message": f"Valid Caste category is required {ALLOWED_CASTES}"}), 400
+
+    # Secure Storage with Timestamp
+    timestamp = int(time.time())
+    file_id = secure_filename(file.filename)
+    filename = f"result_{timestamp}_{file_id}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+
+    try:
+        # Process and filter the results
+        filtered_data = process_caste_result(filepath, caste)
+        
+        return jsonify({
+            "success": True,
+            "message": "File uploaded and processed successfully",
+            "data": filtered_data,
+            "fileName": filename,
+            "caste": caste
+        })
+    except Exception as e:
+        logger.error(f"Processing error: {str(e)}")
+        return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
+
+def process_caste_result(file_path, target_caste):
+    """
+    Extracts data from the PDF and applies caste-based filtering.
+    """
+    # Use existing extraction logic
+    students = extract_pdf_data(file_path)
+    
+    processed_results = []
+    
+    for student in students:
+        # student objects from extract_pdf_data already have USN, Name and Marks.
+        # We need to map them to a caste. 
+        # In this standalone feature, we will use a deterministic mock based on the USN suffix for demo purposes, 
+        # or you can integrate your DB lookup here.
+        
+        # Simple deterministic mapping for demo/integration
+        usn_id = int(''.join(filter(str.isdigit, student.usn)) or "0")
+        student_caste = ALLOWED_CASTES[usn_id % len(ALLOWED_CASTES)]
+        
+        if student_caste.upper() == target_caste.upper():
+            processed_results.append({
+                "name": student.name,
+                "usn": student.usn,
+                "overall_total": student.overall_total,
+                "overall_max": student.overall_max,
+                "percentage": round(student.percentage, 2),
+                "result": student.result
+            })
+
+    return {
+        "total_filtered": len(processed_results),
+        "students": processed_results
+    }
+
+@app.route("/files", methods=["GET"])
+def list_files():
+    files = os.listdir(UPLOAD_FOLDER)
+    pdf_files = [f for f in files if f.endswith('.pdf')]
+    return jsonify({"success": True, "files": pdf_files})
+
+@app.route("/files/<filename>", methods=["DELETE"])
+def delete_file(filename):
+    filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return jsonify({"success": True, "message": f"Deleted {filename}"})
+    return jsonify({"success": False, "message": "File not found"}), 404
+
 
 
 
