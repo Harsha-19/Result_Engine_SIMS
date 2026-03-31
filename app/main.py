@@ -112,26 +112,28 @@ def extract_excel_data(excel_path):
 
     df = pd.read_excel(excel_path, header=header_row_index)
 
-    usn_col = None
-    gender_col = None
+    df.columns = df.columns.str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
 
-    for col in df.columns:
-        if "USN" in str(col).upper():
-            usn_col = col
-        if "GENDER" in str(col).upper():
-            gender_col = col
+    usn_col = next((c for c in df.columns if any(k in str(c) for k in ["USN", "REG", "ROLL"])), None)
+    gender_col = next((c for c in df.columns if any(k in str(c) for k in ["GENDER", "SEX"])), None)
+    cat_col = next((c for c in df.columns if any(k in str(c) for k in ["CATEGORY", "CASTE", "RESERVATION", "CAT"])), None)
 
     if usn_col is None:
         raise ValueError("USN column not found after header detection")
 
-    gender_map = {}
+    student_data_map = {}
 
     for _, row in df.iterrows():
-        usn = str(row[usn_col]).strip()
-        gender = str(row[gender_col]).strip() if gender_col else "NA"
-        gender_map[usn] = gender
+        raw_usn = str(row[usn_col]).strip().upper()
+        if not raw_usn or raw_usn == "NAN": continue
+        student_data_map[raw_usn] = {
+            "gender": str(row[gender_col]).strip().upper() if gender_col else "NA",
+            "category": str(row[cat_col]).strip().upper() if cat_col else "NA"
+        }
 
-    return set(gender_map.keys()), gender_map
+    res = (set(student_data_map.keys()), student_data_map)
+    ResultCache.set(cache_key, res)
+    return res
 
 # API INTERFACE
 
