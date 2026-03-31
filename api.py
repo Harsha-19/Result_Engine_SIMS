@@ -99,8 +99,6 @@ def upload():
         logger.info(f"Duplicate upload detected: {current_hash}")
         return jsonify({"error": "File already uploaded"}), 400
 
-    ui_meta = json.loads(ui_meta) if ui_meta else None
-
     # Sanitize names or use content-based names to avoid collisions
     marks_path = os.path.join(UPLOAD_FOLDER, f"marks_{current_hash[:8]}.pdf")
     caste_path = os.path.join(UPLOAD_FOLDER, f"caste_{current_hash[:8]}.xlsx")
