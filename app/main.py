@@ -7,10 +7,7 @@ import pdfplumber
 from datetime import datetime
 
 
-def extract_pdf_metadata(pdf_path):
 
-    import json
-    import logging
 
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
 
@@ -95,42 +92,6 @@ def extract_pdf_metadata(pdf_path):
 
     return metadata
 
-
-
-def extract_excel_data(excel_path):
-    df_raw = pd.read_excel(excel_path, header=None)
-
-    header_row_index = None
-
-    # Detect header row containing USN
-    # Pre-compile regex for metadata if this were called frequently, 
-    # but since it's once per upload, standard re is fine here.
-    program_match = re.search(r'Program:\s*([A-Za-z\s]+?)\s+Semester:', text, re.I)
-    if program_match: metadata["department"] = program_match.group(1).strip()
-
-    semester_match = re.search(r'Semester:\s*([IVX]+)', text, re.I)
-    if semester_match: metadata["semester"] = semester_match.group(1).strip()
-
-    exam_match = re.search(r'Exam Month:\s*([A-Z/]+/\d{4})', text_upper)
-    if exam_match: metadata["exam_session"] = exam_match.group(1).title()
-
-    date_match = re.search(r'Print Date:\s*(\d{1,2}/\d{1,2}/\d{4})', text)
-    if date_match:
-        try:
-            dt = datetime.strptime(date_match.group(1), "%m/%d/%Y")
-            metadata["result_date"] = dt.strftime("%Y-%m-%d")
-        except: pass
-
-    if metadata["exam_session"]:
-        year_match = re.search(r'\d{4}', metadata["exam_session"])
-        if year_match:
-            yr = int(year_match.group())
-            metadata["academic_year"] = f"{yr-1}-{str(yr)[-2:]}"
-
-    ResultCache.set(cache_key, metadata)
-    return metadata
-
-
 @measure_performance
 def extract_excel_data(excel_path):
     cache_key = f"excel_{get_file_stats(excel_path)}"
@@ -141,7 +102,7 @@ def extract_excel_data(excel_path):
     header_row_index = None
 
     for i in range(len(df_raw)):
-        row_values = df_raw.iloc[i].type(str).str.upper()
+        row_values = df_raw.iloc[i].astype(str).str.upper()
         if any("USN" in str(cell) for cell in row_values):
             header_row_index = i
             break
@@ -173,62 +134,6 @@ def extract_excel_data(excel_path):
     return set(gender_map.keys()), gender_map
 
 # API INTERFACE
-# API INTERFACE
-def process_results(pdf_path, excel_path, ui_meta=None):
-    metadata = extract_pdf_metadata(pdf_path)
-
-    metadata = {
-        "academic_year": ui_meta.get("academic_year", "") if ui_meta else "",
-        "department": ui_meta.get("department", "") if ui_meta else "",
-        "exam_session": ui_meta.get("exam_session", "") if ui_meta else "",
-        "semester": ui_meta.get("semester", "") if ui_meta else "",
-        "result_date": ui_meta.get("result_date", "") if ui_meta else "",
-    }
-
-    students = extract_pdf_data(pdf_path)
-    excel_usns, gender_map = extract_excel_data(excel_path)
-
-    filtered_students = [
-        s for s in students if s.usn.strip() in excel_usns
-    ]
-
-    for s in filtered_students:
-        s.calculate_result()
-
-
-    if header_row_index is None: raise ValueError("USN column not found")
-    df = pd.read_excel(excel_path, header=header_row_index)
-
-    # Normalize columns
-    df.columns = df.columns.str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
-
-    usn_col = next((c for c in df.columns if any(k in str(c) for k in ["USN", "REG", "ROLL"])), None)
-    gender_col = next((c for c in df.columns if any(k in str(c) for k in ["GENDER", "SEX"])), None)
-    cat_col = next((c for c in df.columns if any(k in str(c) for k in ["CATEGORY", "CASTE", "RESERVATION", "CAT"])), None)
-
-    if usn_col is None: raise ValueError("USN column not found in Excel")
-
-    student_data_map = {}
-    for _, row in df.iterrows():
-        raw_usn = str(row[usn_col]).strip().upper()
-        if not raw_usn or raw_usn == "NAN": continue
-        
-        student_data_map[raw_usn] = {
-            "gender": str(row[gender_col]).strip().upper() if gender_col else "NA",
-            "category": str(row[cat_col]).strip().upper() if cat_col else "NA"
-        }
-
-    # Debug sample
-    if student_data_map:
-        sample_usns = list(student_data_map.keys())[:3]
-        for usn in sample_usns:
-            logger.info(f"DEBUG: Excel Mapping USN={usn} -> {student_data_map[usn]}")
-    else:
-        logger.warning("DEBUG: Excel parsing resulted in EMPTY student_data_map")
-
-    res = (set(student_data_map.keys()), student_data_map)
-    ResultCache.set(cache_key, res)
-    return res
 
 # API INTERFACE
 @measure_performance
