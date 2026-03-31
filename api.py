@@ -158,6 +158,7 @@ def delete_file(filename):
 
 # ===================== UPLOAD =====================
 @app.route("/upload", methods=["POST"])
+@measure_performance
 def upload():
     marks_file = request.files.get("marks")
     caste_file = request.files.get("caste")
@@ -166,39 +167,33 @@ def upload():
     if not marks_file or not caste_file:
         return jsonify({"error": "Both files required"}), 400
 
-
     ui_meta = json.loads(ui_meta) if ui_meta else None
 
-    marks_path = os.path.join(UPLOAD_FOLDER, marks_file.filename)
-    caste_path = os.path.join(UPLOAD_FOLDER, caste_file.filename)
-
-    # Read bytes for cache hashing
+    # Performance: Only read bytes once
     marks_bytes = marks_file.read()
     caste_bytes = caste_file.read()
     
-    # Combined hash for unique naming
+    # Combined hash for cache lookup (Instant retrieval for same files)
     current_hash = get_file_hash(marks_bytes + caste_bytes)
     
-    # Seek back to beginning so save() works!
-    marks_file.seek(0)
-    caste_file.seek(0)
+    # Save to disk only if necessary (or keep internal)
+    marks_filename = f"marks_{current_hash[:8]}.pdf"
+    caste_filename = f"caste_{current_hash[:8]}.xlsx"
+    marks_path = os.path.join(UPLOAD_FOLDER, marks_filename)
+    caste_path = os.path.join(UPLOAD_FOLDER, caste_filename)
 
-    # Sanitize names or use content-based names to avoid collisions
-    marks_path = os.path.join(UPLOAD_FOLDER, f"marks_{current_hash[:8]}.pdf")
-    caste_path = os.path.join(UPLOAD_FOLDER, f"caste_{current_hash[:8]}.xlsx")
-
-
-    marks_file.save(marks_path)
-    caste_file.save(caste_path)
+    if not os.path.exists(marks_path):
+        with open(marks_path, "wb") as f: f.write(marks_bytes)
+    if not os.path.exists(caste_path):
+        with open(caste_path, "wb") as f: f.write(caste_bytes)
 
     app.config["MARKS_PATH"] = marks_path
     app.config["CASTE_PATH"] = caste_path
     app.config["UI_META"] = ui_meta
 
+    # CORE DATA EXTRACTION (Cached internally within process_results)
     results = process_results(marks_path, caste_path, ui_meta)
-    # Successful processing -> Record hash
-    PROCESSED_HASHES.add(current_hash)
-
+    
     return jsonify(results)
 
 
