@@ -132,6 +132,25 @@ const Index = () => {
       toast({ title: "Download Failed ❌", description: "Upload & Analyze first." });
     }
   };
+  const handleMarksFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMarksFile(file);
+      toast({ title: "Selection Successful ✅", description: `${file.name} uploaded successfully.` });
+    } else {
+      setMarksFile(null);
+    }
+  };
+
+  const handleCasteFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCasteFile(file);
+      toast({ title: "Selection Successful ✅", description: `${file.name} uploaded successfully.` });
+    } else {
+      setCasteFile(null);
+    }
+  };
 
   const handleUpload = async () => {
     if (!marksFile || !casteFile) {
@@ -265,7 +284,7 @@ const Index = () => {
                   hidden
                   type="file"
                   accept=".pdf"
-                  onChange={(e) => setMarksFile(e.target.files?.[0] || null)}
+                  onChange={handleMarksFileChange}
                 />
               </label>
 
@@ -275,7 +294,7 @@ const Index = () => {
                   hidden
                   type="file"
                   accept=".xlsx,.xls"
-                  onChange={(e) => setCasteFile(e.target.files?.[0] || null)}
+                  onChange={handleCasteFileChange}
                 />
               </label>
 

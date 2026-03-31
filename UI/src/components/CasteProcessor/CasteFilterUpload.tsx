@@ -46,9 +46,19 @@ export const CasteFilterUpload = () => {
     e.preventDefault();
     setIsDragActive(false);
     if (e.dataTransfer.files[0]?.type === 'application/pdf') {
-      setFile(e.dataTransfer.files[0]);
+      const droppedFile = e.dataTransfer.files[0];
+      setFile(droppedFile);
+      toast({ title: "Selection Successful ✅", description: `${droppedFile.name} uploaded successfully.` });
     } else {
       toast({ title: "Error", description: "Only PDF files are allowed", variant: "destructive" });
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      toast({ title: "Selection Successful ✅", description: `${selectedFile.name} uploaded successfully.` });
     }
   };
 
@@ -179,7 +189,7 @@ export const CasteFilterUpload = () => {
                     accept=".pdf" 
                     hidden 
                     ref={fileInputRef} 
-                    onChange={e => e.target.files && setFile(e.target.files[0])} 
+                    onChange={handleFileChange} 
                   />
                 </div>
               </div>

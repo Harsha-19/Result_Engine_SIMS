@@ -5,10 +5,8 @@ import os
 import pandas as pd
 from app.main import process_results
 from docx import Document  # type: ignore[import]
-from docx.shared import Inches  # type: ignore[import]
 from docx.oxml import OxmlElement  # type: ignore[import]
 from docx.oxml.ns import qn  # type: ignore[import]
-from docx.enum.text import WD_ALIGN_PARAGRAPH  # type: ignore[import]
 import json
 import time
 from werkzeug.utils import secure_filename
@@ -42,7 +40,7 @@ if extra_origins:
 CORS(app, resources={
     r"/*": {
         "origins": ALLOWED_ORIGINS,
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["GET", "POST", "OPTIONS", "DELETE"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
@@ -174,21 +172,16 @@ def upload():
     marks_path = os.path.join(UPLOAD_FOLDER, marks_file.filename)
     caste_path = os.path.join(UPLOAD_FOLDER, caste_file.filename)
 
-    # DUPLICATE DETECTION (Option A: Hashing)
-    # Read bytes to compute hash without moving file cursor
+    # Read bytes for cache hashing
     marks_bytes = marks_file.read()
     caste_bytes = caste_file.read()
     
-    # Combined hash to detect if this specific pair was processed
+    # Combined hash for unique naming
     current_hash = get_file_hash(marks_bytes + caste_bytes)
     
     # Seek back to beginning so save() works!
     marks_file.seek(0)
     caste_file.seek(0)
-    
-    if current_hash in PROCESSED_HASHES:
-        logger.info(f"Duplicate upload detected: {current_hash}")
-        return jsonify({"error": "File already uploaded"}), 400
 
     # Sanitize names or use content-based names to avoid collisions
     marks_path = os.path.join(UPLOAD_FOLDER, f"marks_{current_hash[:8]}.pdf")
@@ -257,45 +250,6 @@ def generate_doc_report():
     print("Exists:",os.path.exists(template_path))
     doc = Document(template_path)
 
-    # ===================== WATERMARK (BOTH FORMATS) =====================
-    def _find_watermark_logo_path():
-        candidates = [
-            os.path.join(BASE_DIR, "static", "watermark.PNG"),
-            os.path.join(BASE_DIR, "static", "watermark.jpg"),
-            os.path.join(BASE_DIR, "watermark.PNG"),
-            os.path.join(BASE_DIR, "watermark.jpg"),
-            os.path.join(BASE_DIR, "UI", "public", "watermark.PNG"),
-            os.path.join(BASE_DIR, "UI", "public", "watermark.jpg"),
-        ]
-        for p in candidates:
-            if os.path.exists(p):
-                return p
-        return None
-
-    def add_footer_watermark(doc_obj, watermark_path: str):
-        # Adds a subtle watermark image in the footer (bottom-right) exactly once per document.
-        try:
-            # Prefer a single footer for the whole document.
-            if len(doc_obj.sections) > 1:
-                for i in range(1, len(doc_obj.sections)):
-                    doc_obj.sections[i].footer.is_linked_to_previous = True
-
-            footer = doc_obj.sections[0].footer
-
-            # Clear existing footer content (avoid stacking / expanding footer height).
-            for p in list(footer.paragraphs):
-                p._element.getparent().remove(p._element)
-            for t in list(footer.tables):
-                t._element.getparent().remove(t._element)
-
-            para = footer.add_paragraph()
-            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            run = para.add_run()
-            run.add_picture(watermark_path, width=Inches(1.0))
-        except Exception:
-            # Fail-safe: do not break report generation if watermark insertion fails
-            pass
-
     def _enforce_read_only(doc_obj):
         # "Read-only" without password (removable but meets the "if possible" requirement)
         try:
@@ -308,38 +262,6 @@ def generate_doc_report():
                 settings_el.append(dp)
         except Exception:
             pass
-
-    watermark_path = _find_watermark_logo_path()
-    if watermark_path:
-        add_footer_watermark(doc, watermark_path)
-    # ============ WATERMARK CONTROL ============
-    def strip_watermark_from_template(doc_obj):
-        """Programmatically removes common watermark shapes from headers/footers."""
-        try:
-            for section in doc_obj.sections:
-                # Search and remove from header
-                for header in [section.header, section.first_page_header, section.even_page_header]:
-                    if not header: continue
-                    for para in header.paragraphs:
-                        # Watermarks are often in VML shapes/pict elements
-                        if "PowerPlusWaterMarkObject" in para._element.xml or "Word.Picture" in para._element.xml:
-                             # This is a bit aggressive but targets common Word watermark IDs
-                             para._element.getparent().remove(para._element)
-                
-                # Search and remove from footer
-                for footer in [section.footer, section.first_page_footer, section.even_page_footer]:
-                    if not footer: continue
-                    for para in footer.paragraphs:
-                        if "PowerPlusWaterMarkObject" in para._element.xml:
-                             para._element.getparent().remove(para._element)
-        except Exception as e:
-            logger.warning(f"Failed to strip watermark from template: {e}")
-
-    # Remove any existing watermarks from the template itself
-    strip_watermark_from_template(doc)
-    
-    # ensure NO footer watermark is added via code
-    # (previous logic was already commented out)
 
     _enforce_read_only(doc)
 
