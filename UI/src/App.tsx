@@ -20,10 +20,10 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-      <img 
-        src="/watermark.PNG" 
-        alt="Watermark" 
-        className="fixed bottom-8 left-8 w-32 md:w-48 opacity-20 select-none pointer-events-none z-[9999] print:hidden transition-all duration-500 hover:opacity-40"
+      <img
+        src="/watermark.PNG"
+        alt="Watermark"
+        className="fixed bottom-8 left-8 w-32 md:w-48 opacity-70 select-none pointer-events-none z-[9999] print:hidden transition-all duration-500 hover:opacity-40"
         draggable={false}
         onContextMenu={(e) => e.preventDefault()}
       />
