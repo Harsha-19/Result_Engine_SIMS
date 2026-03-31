@@ -1,5 +1,6 @@
 import sys
 import pandas as pd
+import json
 import re
 from app.extractors.pdf_extractor import extract_pdf_data
 from app.services.summary_service import generate_summary
