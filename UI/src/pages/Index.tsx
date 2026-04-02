@@ -25,13 +25,13 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
       <div className="bg-white/10 backdrop-blur-2xl p-10 rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-white/20 flex flex-col items-center max-w-sm w-full mx-4 space-y-8 text-white relative overflow-hidden">
         {/* Animated Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-blue-500/10 opacity-50" />
-        
+
         <div className="relative z-10 flex flex-col items-center space-y-8 w-full">
           <div className="relative">
             <div className="h-24 w-24 border-4 border-white/10 rounded-full"></div>
             <div className="absolute inset-0 h-24 w-24 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-               {step > 0 && React.createElement(steps[Math.min(step - 1, 3)].icon, { className: `w-10 h-10 ${steps[Math.min(step - 1, 3)].color} animate-pulse` })}
+              {step > 0 && React.createElement(steps[Math.min(step - 1, 3)].icon, { className: `w-10 h-10 ${steps[Math.min(step - 1, 3)].color} animate-pulse` })}
             </div>
           </div>
 
@@ -39,20 +39,18 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
             <h2 className="text-2xl font-black tracking-tight text-white drop-shadow-lg">
               {step === 5 ? "Analysis Complete!" : "Processing Results"}
             </h2>
-            
+
             <div className="space-y-3">
               {steps.map((s) => (
                 <div key={s.id} className="flex items-center gap-3 transition-all duration-300">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${
-                    step > s.id ? "bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : 
-                    step === s.id ? "border-emerald-400 animate-pulse" : "border-white/20"
-                  }`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step > s.id ? "bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" :
+                      step === s.id ? "border-emerald-400 animate-pulse" : "border-white/20"
+                    }`}>
                     {step > s.id ? <CheckCircle2 className="w-4 h-4 text-white" /> : <div className={`w-2 h-2 rounded-full ${step === s.id ? "bg-emerald-400" : "bg-white/20"}`} />}
                   </div>
-                  <span className={`text-sm font-bold uppercase tracking-wider transition-colors duration-300 ${
-                    step > s.id ? "text-emerald-400" : 
-                    step === s.id ? "text-white" : "text-white/30"
-                  }`}>
+                  <span className={`text-sm font-bold uppercase tracking-wider transition-colors duration-300 ${step > s.id ? "text-emerald-400" :
+                      step === s.id ? "text-white" : "text-white/30"
+                    }`}>
                     {s.label}
                   </span>
                 </div>
@@ -60,8 +58,8 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
             </div>
 
             <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden border border-white/5">
-              <div 
-                className="h-full bg-emerald-400 transition-all duration-700 ease-out shadow-[0_0_20px_rgba(52,211,153,0.6)]" 
+              <div
+                className="h-full bg-emerald-400 transition-all duration-700 ease-out shadow-[0_0_20px_rgba(52,211,153,0.6)]"
                 style={{ width: `${(Math.min(step, 4) / 4) * 100}%` }}
               />
             </div>
@@ -324,33 +322,29 @@ const Index = () => {
           <Tabs defaultValue="dashboard" className="w-full">
             {/* ... rest of the component content ... */}
             <div className="flex items-center justify-between flex-wrap gap-6 mb-10 pb-6 border-b border-gray-100 dark:border-gray-800">
-               <div className="space-y-1">
-                  <h1 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">Academic Result Intelligence</h1>
-                  <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Enterprise Processing Suite v2.0</p>
-               </div>
 
-               <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
-                  <TabsList className="bg-transparent h-auto p-0 gap-1 border-none shadow-none">
-                    <TabsTrigger 
-                      value="dashboard" 
-                      className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
-                    >
-                      <LayoutDashboard className="w-4 h-4" /> Comprehensive Analysis
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="caste" 
-                      className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
-                    >
-                      <ShieldCheck className="w-4 h-4" /> Category Processing
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                  
-                  <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all">
-                    {theme === "dark" ? "☀" : "🌙"}
-                  </Button>
-               </div>
+              <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
+                <TabsList className="bg-transparent h-auto p-0 gap-1 border-none shadow-none">
+                  <TabsTrigger
+                    value="dashboard"
+                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" /> Comprehensive Analysis
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="caste"
+                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Category Processing
+                  </TabsTrigger>
+                </TabsList>
+
+                <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all">
+                  {theme === "dark" ? "☀" : "🌙"}
+                </Button>
+              </div>
             </div>
 
             <TabsContent value="dashboard" className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -375,8 +369,8 @@ const Index = () => {
                   />
                 </label>
 
-                <Button 
-                  onClick={handleUpload} 
+                <Button
+                  onClick={handleUpload}
                   disabled={loading}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 dark:shadow-none min-w-[160px]"
                 >
@@ -405,7 +399,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="caste" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-               <CasteFilterUpload />
+              <CasteFilterUpload />
             </TabsContent>
           </Tabs>
         </div>
