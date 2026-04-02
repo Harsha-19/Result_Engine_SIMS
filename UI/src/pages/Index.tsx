@@ -44,12 +44,12 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
               {steps.map((s) => (
                 <div key={s.id} className="flex items-center gap-3 transition-all duration-300">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${step > s.id ? "bg-emerald-500 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" :
-                      step === s.id ? "border-emerald-400 animate-pulse" : "border-white/20"
+                    step === s.id ? "border-emerald-400 animate-pulse" : "border-white/20"
                     }`}>
                     {step > s.id ? <CheckCircle2 className="w-4 h-4 text-white" /> : <div className={`w-2 h-2 rounded-full ${step === s.id ? "bg-emerald-400" : "bg-white/20"}`} />}
                   </div>
                   <span className={`text-sm font-bold uppercase tracking-wider transition-colors duration-300 ${step > s.id ? "text-emerald-400" :
-                      step === s.id ? "text-white" : "text-white/30"
+                    step === s.id ? "text-white" : "text-white/30"
                     }`}>
                     {s.label}
                   </span>
@@ -323,7 +323,7 @@ const Index = () => {
             {/* ... rest of the component content ... */}
             <div className="flex items-center justify-between flex-wrap gap-6 mb-10 pb-6 border-b border-gray-100 dark:border-gray-800">
 
-              <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
+              <div className="ml-auto flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
                 <TabsList className="bg-transparent h-auto p-0 gap-1 border-none shadow-none">
                   <TabsTrigger
                     value="dashboard"
