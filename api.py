@@ -8,6 +8,7 @@ from docx import Document  # type: ignore[import]
 from docx.oxml import OxmlElement  # type: ignore[import]
 from docx.oxml.ns import qn  # type: ignore[import]
 import json
+import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from app.extractors.pdf_extractor import extract_pdf_data
@@ -34,7 +35,7 @@ ENABLE_CACHE = os.environ.get("ENABLE_CACHE", "True").lower() == "true"
 ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://sims-result.netlify.app/",
+    "https://sims-result.netlify.app",
     "http://localhost:5173",
 ]
 
