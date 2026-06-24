@@ -1,4 +1,4 @@
-from pydoc import doc
+
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
@@ -36,7 +36,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "https://sims-result.netlify.app",
-    "http://localhost:5173",
+    "http://localhost:5173"
+    "http://10.142.66.222:8080/",
 ]
 
 # Allow overriding origins via environment variable
@@ -45,15 +46,7 @@ if extra_origins:
     ALLOWED_ORIGINS.extend(extra_origins.split(","))
 
 CORS(
-    app,
-    resources={
-        r"/*": {
-            "origins": ALLOWED_ORIGINS,
-            "methods": ["GET", "POST", "OPTIONS", "DELETE"],
-            "allow_headers": ["Content-Type", "Authorization"],
-        }
-    },
-)
+    app)
 
 
 UPLOAD_FOLDER = "uploads"
