@@ -46,7 +46,15 @@ if extra_origins:
     ALLOWED_ORIGINS.extend(extra_origins.split(","))
 
 CORS(
-    app)
+    app,
+    resources={
+        r"/*": {
+            "origins": ALLOWED_ORIGINS,
+            "methods": ["GET", "POST", "OPTIONS", "DELETE"],
+            "allow_headers": ["Content-Type", "Authorization"],
+        }
+    },
+)
 
 
 UPLOAD_FOLDER = "uploads"
