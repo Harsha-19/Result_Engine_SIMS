@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
@@ -32,28 +31,11 @@ PROCESSED_HASHES = set()
 USE_ASYNC = os.environ.get("USE_ASYNC", "False").lower() == "true"
 ENABLE_CACHE = os.environ.get("ENABLE_CACHE", "True").lower() == "true"
 
-ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "https://sims-result.netlify.app",
-    "http://localhost:5173"
-    "http://10.142.66.222:8080/",
-]
-
-# Allow overriding origins via environment variable
-extra_origins = os.environ.get("ORIGINS")
-if extra_origins:
-    ALLOWED_ORIGINS.extend(extra_origins.split(","))
-
 CORS(
     app,
     resources={
-        r"/*": {
-            "origins": ALLOWED_ORIGINS,
-            "methods": ["GET", "POST", "OPTIONS", "DELETE"],
-            "allow_headers": ["Content-Type", "Authorization"],
-        }
-    },
+        r"/*": {"origins": "*"}
+    }
 )
 
 
@@ -64,6 +46,30 @@ TEMPLATE_FOLDER = os.path.join("app", "templates")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(EXPORT_FOLDER, exist_ok=True)
+
+@app.before_request
+def log_request():
+    print(
+        f"[REQUEST] {request.method} {request.path} "
+        f"FROM {request.remote_addr}"
+    )
+
+@app.after_request
+def log_response(response):
+    print(
+        f"[RESPONSE] {request.method} "
+        f"{request.path} -> {response.status}"
+    )
+    return response
+
+@app.route("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.route("/test")
+def test():
+    print("TEST ROUTE HIT")
+    return {"message": "backend working"}
 
 
 @app.route("/")
@@ -181,9 +187,17 @@ def delete_file(filename):
 @app.route("/upload", methods=["POST"])
 @measure_performance
 def upload():
+    logger.info("UPLOAD REQUEST RECEIVED")
+    start = time.time()
+    
     marks_file = request.files.get("marks")
     caste_file = request.files.get("caste")
     ui_meta = request.form.get("ui_meta")
+
+    if marks_file:
+        logger.info(f"Marks File: {marks_file.filename}")
+    if caste_file:
+        logger.info(f"Caste File: {caste_file.filename}")
 
     if not marks_file or not caste_file:
         return jsonify({"error": "Both files required"}), 400
@@ -210,6 +224,8 @@ def upload():
         with open(caste_path, "wb") as f:
             f.write(caste_bytes)
 
+    logger.info("File uploaded.")
+
     app.config["MARKS_PATH"] = marks_path
     app.config["CASTE_PATH"] = caste_path
     app.config["UI_META"] = ui_meta
@@ -217,6 +233,8 @@ def upload():
     # CORE DATA EXTRACTION (Cached internally within process_results)
     results = process_results(marks_path, caste_path, ui_meta)
 
+    logger.info("Response generated.")
+    logger.info(f"Execution time: {time.time()-start}")
     return jsonify(results)
 
 

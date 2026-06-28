@@ -1,7 +1,8 @@
 import pdfplumber
 import re
+import time
 from app.models.student_model import Student
-from app.services.performance_utils import measure_performance
+from app.services.performance_utils import measure_performance, logger
 
 # 🔹 Pre-compiled patterns for high performance extraction
 USN_PATTERN = re.compile(r"(U\d{2}[A-Z]{2}\d{2}S\d{4})")
@@ -15,6 +16,8 @@ SUBJECT_PARSE_PATTERN = re.compile(r"([A-Z0-9\-\/]+)\s+([A-Z &\-/]+?)\s+(\d+)\s*
 @measure_performance
 def extract_pdf_data(pdf_path):
     """Memory-efficient PDF extraction with regex-optimized processing."""
+    logger.info("Entering extract_pdf_data")
+    start = time.time()
     students = []
     text_chunks = []
     
@@ -66,6 +69,9 @@ def extract_pdf_data(pdf_path):
         student.calculate_result()
         students.append(student)
 
+    logger.info("PDF parsed.")
+    logger.info(f"Execution time: {time.time()-start}")
+    logger.info("Leaving extract_pdf_data")
     return students
 
 def get_clean_subject_title(subject):

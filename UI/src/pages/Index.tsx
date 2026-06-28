@@ -70,7 +70,8 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
   );
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "https://result-engine-sims.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL ||
+  "http://localhost:5000";
 
 const Index = () => {
   const { toast } = useToast();
@@ -132,6 +133,7 @@ const Index = () => {
         subjects: subjectMeta,
       };
 
+      console.log("API URL:", API_URL);
       const response = await fetch(`${API_URL}/generate-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,6 +170,7 @@ const Index = () => {
         subjects: subjectMeta,
       };
 
+      console.log("API URL:", API_URL);
       const response = await fetch(`${API_URL}/generate-report?format=public`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -240,6 +243,7 @@ const Index = () => {
         setProcessingStep(prev => prev < 4 ? prev + 1 : prev);
       }, 800);
 
+      console.log("API URL:", API_URL);
       const response = await fetch(`${API_URL}/upload`, {
         method: "POST",
         body: formData,

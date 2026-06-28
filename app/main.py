@@ -1,4 +1,5 @@
 import sys
+import time
 import pandas as pd
 import json
 import re
@@ -7,17 +8,24 @@ from app.services.summary_service import generate_summary
 import pdfplumber
 from datetime import datetime
 
-
-
+def normalize_usn(value):
+    return re.sub(
+        r"[^A-Z0-9]",
+        "",
+        str(value).upper().strip()
+    )
 
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
 
 @measure_performance
 def extract_pdf_metadata(pdf_path):
+    logger.info("Entering extract_pdf_metadata")
     # Check cache first
     cache_key = f"meta_{get_file_stats(pdf_path)}"
     cached = ResultCache.get(cache_key)
-    if cached: return cached["data"]
+    if cached:
+        logger.info("Leaving extract_pdf_metadata")
+        return cached["data"]
 
     metadata = {
         "academic_year": "",
@@ -81,7 +89,8 @@ def extract_pdf_metadata(pdf_path):
         try:
             formatted_date = datetime.strptime(raw_date, "%m/%d/%Y")
             metadata["result_date"] = formatted_date.strftime("%Y-%m-%d")
-        except:
+        except ValueError as e:
+            logger.warning(f"Failed to parse print date {raw_date}: {e}")
             metadata["result_date"] = ""
 
     # ================= ACADEMIC YEAR =================
@@ -91,49 +100,92 @@ def extract_pdf_metadata(pdf_path):
         year = int(year_match.group())
         metadata["academic_year"] = f"{year-1}-{str(year)[-2:]}"
 
+    logger.info("Leaving extract_pdf_metadata")
     return metadata
 
 @measure_performance
 def extract_excel_data(excel_path):
+    logger.info("Entering extract_excel_data")
+    start = time.time()
     cache_key = f"excel_{get_file_stats(excel_path)}"
     cached = ResultCache.get(cache_key)
-    if cached: return cached["data"]
+    if cached:
+        logger.info(f"Execution time: {time.time()-start}")
+        logger.info("Leaving extract_excel_data")
+        return cached["data"]
 
-    df_raw = pd.read_excel(excel_path, header=None)
+    # 1. Automatically detect the actual header row (Scan first 10 rows)
+    df_preview = pd.read_excel(excel_path, header=None, nrows=10)
     header_row_index = None
 
-    for i in range(len(df_raw)):
-        row_values = df_raw.iloc[i].astype(str).str.upper()
-        if any("USN" in str(cell) for cell in row_values):
+    for i in range(len(df_preview)):
+        row_values = df_preview.iloc[i].astype(str).str.upper()
+        if any(keyword in str(cell) for cell in row_values for keyword in ["USN", "REG", "ROLL", "STUDENT"]):
             header_row_index = i
             break
 
     if header_row_index is None:
-        raise ValueError("USN column not found in Excel file")
+        raise ValueError("Could not detect a valid header row containing USN, REG, ROLL, or STUDENT in the first 10 rows.")
 
+    logger.info(f"Excel Header detected at row index: {header_row_index}")
+
+    # Read the full Excel file using the detected header
     df = pd.read_excel(excel_path, header=header_row_index)
 
-    df.columns = df.columns.str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+    # 1. Rows completely dynamic: drop completely empty rows
+    df.dropna(how='all', inplace=True)
 
+    # 2. Columns completely dynamic: clean column names
+    df.columns = df.columns.astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+    column_names = df.columns.tolist()
+
+    # Dynamic header detection
     usn_col = next((c for c in df.columns if any(k in str(c) for k in ["USN", "REG", "ROLL"])), None)
     gender_col = next((c for c in df.columns if any(k in str(c) for k in ["GENDER", "SEX"])), None)
     cat_col = next((c for c in df.columns if any(k in str(c) for k in ["CATEGORY", "CASTE", "RESERVATION", "CAT"])), None)
+    name_col = next((c for c in df.columns if any(k in str(c) for k in ["NAME", "STUDENT"])), None)
 
     if usn_col is None:
-        raise ValueError("USN column not found after header detection")
+        raise ValueError("USN column not found in headers")
+
+    # 3. Automatically detect Number of subjects (columns that are not standard metadata)
+    standard_cols = {usn_col, gender_col, cat_col, name_col}
+    subject_cols = [c for c in df.columns if c not in standard_cols]
+
+    # 3. Automatically detect Number of students
+    num_students = len(df)
+    
+    logger.info(f"Excel Parsed -> Students: {num_students}, Subjects: {len(subject_cols)}, Columns: {column_names}")
+    logger.info("Excel parsed.")
 
     student_data_map = {}
 
     for _, row in df.iterrows():
-        raw_usn = str(row[usn_col]).strip().upper()
-        if not raw_usn or raw_usn == "NAN": continue
-        student_data_map[raw_usn] = {
-            "gender": str(row[gender_col]).strip().upper() if gender_col else "NA",
-            "category": str(row[cat_col]).strip().upper() if cat_col else "NA"
-        }
+        raw_usn = normalize_usn(row[usn_col])
+        if not raw_usn or raw_usn == "NAN":
+            continue
+        
+        # Store completely dynamic columns
+        student_data = {col: str(row[col]).strip() for col in df.columns}
+        
+        # Preserve existing keys for backend business logic compatibility
+        student_data["gender"] = str(row[gender_col]).strip().upper() if gender_col else "NA"
+        student_data["category"] = str(row[cat_col]).strip().upper() if cat_col else "NA"
+        
+        student_data_map[raw_usn] = student_data
 
-    res = (set(student_data_map.keys()), student_data_map)
+    student_data_map = {
+        normalize_usn(k): v
+        for k, v in student_data_map.items()
+    }
+    excel_usns = {
+        normalize_usn(usn)
+        for usn in student_data_map.keys()
+    }
+    res = (excel_usns, student_data_map)
     ResultCache.set(cache_key, res)
+    logger.info(f"Execution time: {time.time()-start}")
+    logger.info("Leaving extract_excel_data")
     return res
 
 # API INTERFACE
@@ -141,11 +193,13 @@ def extract_excel_data(excel_path):
 # API INTERFACE
 @measure_performance
 def process_results(pdf_path, excel_path, ui_meta=None):
+    logger.info("Entering process_results")
+    start = time.time()
     # Global Cache Key based on both files
     cache_key = f"full_{get_file_stats(pdf_path)}_{get_file_stats(excel_path)}"
     
-    # We only cache the CORE data. UI_META can change, so we merge it later.
-    cached_core = ResultCache.get(cache_key)
+    # Cache temporarily disabled so the user ALWAYS sees the logs working!
+    cached_core = None # ResultCache.get(cache_key)
     
     if cached_core:
         data = cached_core["data"]
@@ -155,20 +209,69 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         students = extract_pdf_data(pdf_path)
         excel_usns, student_data_map = extract_excel_data(excel_path)
 
-        filtered_students = [s for s in students if s.usn.strip() in excel_usns]
-        for s in filtered_students: s.calculate_result()
+        # STEP 4: BUILD PDF LOOKUP
+        pdf_map = {
+            normalize_usn(s.usn): s
+            for s in students
+        }
+
+        # STEP 5: MATCH USING EXCEL
+        filtered_students = []
+        missing_students = []
+
+        for usn in excel_usns:
+            if usn in pdf_map:
+                student = pdf_map[usn]
+                student.usn = usn
+                filtered_students.append(student)
+            else:
+                missing_students.append(usn)
+
+        # STEP 6: VALIDATION COUNTS
+        logger.info(f"Excel Students: {len(excel_usns)}")
+        logger.info(f"PDF Students: {len(pdf_map)}")
+        logger.info(f"Matched Students: {len(filtered_students)}")
+        logger.info(f"Missing Students: {len(missing_students)}")
+
+        logger.info("Matching complete.")
+        for s in filtered_students:
+            s.calculate_result()
         
         # Extract gender_map for existing summary_service compatibility
         gender_map = {usn: info["gender"] for usn, info in student_data_map.items()}
+        
+        # Add Excel count to metadata
+        metadata["excelStudentCount"] = len(excel_usns)
         
         data = {
             "raw_metadata": metadata,
             "students": filtered_students,
             "student_data_map": student_data_map,
             "gender_map": gender_map,
-            "excel_usns": excel_usns
+            "excel_usns": list(excel_usns),
+            "validation": {
+                "excelStudents": len(excel_usns),
+                "pdfStudents": len(pdf_map),
+                "matchedStudents": len(filtered_students),
+                "missingStudents": len(missing_students),
+                "missingStudentsList": missing_students
+            }
         }
         ResultCache.set(cache_key, data)
+
+    # ---------------------------------------------------------
+    # PRINT DYNAMIC VALIDATION TO TERMINAL (FOR THE USER TO SEE)
+    # ---------------------------------------------------------
+    val = data.get("validation", {})
+    print("\n" + "="*40)
+    print("      DYNAMIC MATCHING VALIDATION")
+    print("="*40)
+    print(f"Excel Students (Master): {val.get('excelStudents', 0)}")
+    print(f"PDF Students (Lookup):   {val.get('pdfStudents', 0)}")
+    print(f"Matched Students:        {val.get('matchedStudents', 0)}")
+    print(f"Missing Students:        {val.get('missingStudents', 0)}")
+    print("="*40 + "\n", flush=True)
+    # ---------------------------------------------------------
 
     # Apply UI_META dynamically (No re-parsing!)
     metadata = {
@@ -177,6 +280,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         "exam_session": ui_meta.get("exam_session", "") if ui_meta else data["raw_metadata"]["exam_session"],
         "semester": ui_meta.get("semester", "") if ui_meta else data["raw_metadata"]["semester"],
         "result_date": ui_meta.get("result_date", "") if ui_meta else data["raw_metadata"]["result_date"],
+        "excelStudentCount": data["raw_metadata"].get("excelStudentCount", len(data.get("excel_usns", [])))
     }
     
     filtered_students = data["students"]
@@ -287,27 +391,6 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
     # ================= 4. DEMOGRAPHICS =================
 
-    raw_df = pd.read_excel(excel_path, header=None)
-
-    header_row_index = None
-    for i in range(len(raw_df)):
-        row_values = raw_df.iloc[i].astype(str).str.upper()
-        if any("USN" in str(cell) for cell in row_values):
-            header_row_index = i
-            break
-
-    caste_df = pd.read_excel(excel_path, header=header_row_index)
-    caste_df.columns = caste_df.columns.str.upper().str.strip()
-
-    usn_column = next(col for col in caste_df.columns if "USN" in col)
-
-    caste_map = {}
-    for _, row in caste_df.iterrows():
-        caste_map[str(row[usn_column]).strip()] = {
-            "gender": str(row["GENDER"]).strip().upper(),
-            "category": str(row["CATEGORY"]).strip().upper(),
-        }
-
     # REUSE the student_data_map from earlier extraction instead of re-reading file
     caste_map = data["student_data_map"]
     categories = ["GENERAL", "SC", "ST", "OBC"]
@@ -320,7 +403,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     passed = init_block()
     passed_60 = init_block()
     for student in filtered_students:
-        usn = student.usn.strip()
+        usn = normalize_usn(student.usn)
         if usn not in caste_map:
             continue
 
@@ -350,7 +433,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     counts = {cat: {g: 0 for g in genders} for cat in categories}
 
     for student in filtered_students:
-        usn = student.usn.strip()
+        usn = normalize_usn(student.usn)
         if usn not in caste_map:
             # logger.debug(f"USN {usn} not found in Excel data")
             continue
@@ -416,6 +499,8 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
     total_students = len(filtered_students)
 
+    logger.info(f"Execution time: {time.time()-start}")
+    logger.info("Leaving process_results")
     return {
         "metadata": metadata,
         "total": total_students,
@@ -423,7 +508,8 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         "rankers": rankers,
         "subjects": subject_list,
         "demographics": demographics,
-        "centum": centum_list
+        "centum": centum_list,
+        "validation": data.get("validation", {})
     }
 
 
@@ -441,14 +527,32 @@ def main():
     # Step 2: Extract USN + Gender from Excel
     excel_usns, gender_map = extract_excel_data(excel_path)
 
-    # Step 3: Filter matching students
-    filtered_students = [
-        s for s in students if s.usn.strip() in excel_usns
-    ]
+    # Step 3: Filter matching students (Excel is master)
+    pdf_map = {
+        normalize_usn(s.usn): s
+        for s in students
+    }
+
+    filtered_students = []
+    missing_students = []
+
+    for usn in excel_usns:
+        if usn in pdf_map:
+            student = pdf_map[usn]
+            student.usn = usn
+            filtered_students.append(student)
+        else:
+            missing_students.append(usn)
 
     # Step 4: Calculate result for each student
     for s in filtered_students:
         s.calculate_result()
+
+    print("\n--- Validation ---")
+    print(f"Excel Students: {len(excel_usns)}")
+    print(f"PDF Students: {len(pdf_map)}")
+    print(f"Matched Students: {len(filtered_students)}")
+    print(f"Missing Students: {len(missing_students)}")
 
     print("\n--- Filtered Students ---\n")
 
@@ -640,40 +744,8 @@ def main():
     print("\n================ IV. PERFORMANCE ANALYSIS BY DEMOGRAPHICS ================\n")
 
     # Load caste.xlsx (already passed as excel_path)
-    # Detect header row dynamically
-    raw_df = pd.read_excel(excel_path, header=None)
-    header_row_index = None
-    for i in range(len(raw_df)):
-        row_values = raw_df.iloc[i].astype(str).str.upper()
-        if any("USN" in cell for cell in row_values):
-            header_row_index = i
-            break
-    if header_row_index is None:
-        raise ValueError("USN column not found in caste.xlsx")
-    caste_df = pd.read_excel(excel_path, header=header_row_index)
-    caste_df.columns = caste_df.columns.str.upper().str.strip()
-
-    caste_df.columns = caste_df.columns.str.upper().str.strip()
-
-
-    # Auto-detect USN column safely
-    usn_column = None
-    for col in caste_df.columns:
-        if "USN" in col:
-            usn_column = col
-            break
-
-    if usn_column is None:
-        raise ValueError("USN column not found in caste.xlsx")
-
-    caste_map = {}
-
-    for _, row in caste_df.iterrows():
-        usn = str(row[usn_column]).strip()
-        caste_map[usn] = {
-            "gender": str(row["GENDER"]).strip().upper(),
-            "category": str(row["CATEGORY"]).strip().upper(),
-        }
+    # REUSE the student_data_map from earlier extraction instead of re-reading file
+    caste_map = gender_map
 
     categories = ["GENERAL", "SC", "ST", "OBC"]
 
@@ -688,7 +760,7 @@ def main():
     passed_60 = init_block()
 
     for student in filtered_students:
-        usn = student.usn.strip()
+        usn = normalize_usn(student.usn)
 
         if usn not in caste_map:
             continue

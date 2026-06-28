@@ -5,11 +5,15 @@ import os
 from datetime import datetime
 
 # Configure Logging
+import sys
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True
 )
 logger = logging.getLogger("performance")
+logger.setLevel(logging.INFO)
 
 def measure_performance(func):
     """Decorator to measure and log function execution time."""
