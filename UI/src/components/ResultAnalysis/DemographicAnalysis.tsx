@@ -4,9 +4,6 @@ interface DemographicAnalysisProps {
   demographics: any;
 }
 
-const categories = ["GENERAL", "OBC", "SC", "ST"];
-const genders = ["MALE", "FEMALE"];
-
 export const DemographicAnalysis: React.FC<DemographicAnalysisProps> = ({ demographics }) => {
   if (!demographics) {
     return (
@@ -21,6 +18,9 @@ export const DemographicAnalysis: React.FC<DemographicAnalysisProps> = ({ demogr
     );
   }
 
+  const categories = demographics?.meta?.categories || ["GENERAL", "OBC", "SC", "ST"];
+  const genders = demographics?.meta?.genders || ["MALE", "FEMALE"];
+
   const renderBlock = (title: string, block: any) => (
     <div className="space-y-4">
       <h4 className="text-lg font-semibold text-muted-foreground">
@@ -32,20 +32,22 @@ export const DemographicAnalysis: React.FC<DemographicAnalysisProps> = ({ demogr
           <thead>
             <tr className="bg-gradient-to-r from-primary to-blue-600 text-white">
               <th className="p-3 rounded-tl-2xl">Category</th>
-              <th className="p-3">Male</th>
-              <th className="p-3 rounded-tr-2xl">Female</th>
+              {genders.map((gen: string, idx: number) => (
+                <th key={gen} className={`p-3 ${idx === genders.length - 1 ? 'rounded-tr-2xl' : ''}`}>
+                  {gen.charAt(0).toUpperCase() + gen.slice(1).toLowerCase()}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {categories.map((cat) => (
+            {categories.map((cat: string) => (
               <tr key={cat} className="border-b">
                 <td className="p-3 font-medium">{cat}</td>
-                <td className="p-3 text-center">
-                  {block?.[cat]?.["MALE"] ?? 0}
-                </td>
-                <td className="p-3 text-center">
-                  {block?.[cat]?.["FEMALE"] ?? 0}
-                </td>
+                {genders.map((gen: string) => (
+                  <td key={gen} className="p-3 text-center">
+                    {block?.[cat]?.[gen] ?? 0}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>

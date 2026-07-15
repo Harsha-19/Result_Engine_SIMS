@@ -6,10 +6,8 @@ import { SubjectAnalysis } from "@/components/ResultAnalysis/SubjectAnalysis";
 import { DemographicAnalysis } from "@/components/ResultAnalysis/DemographicAnalysis";
 import { CentumAchievers } from "@/components/ResultAnalysis/Centum";
 import { Button } from "@/components/ui/button";
-import { Download, LayoutDashboard, UserCheck, ShieldCheck } from "lucide-react";
+import { Download, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CasteFilterUpload } from "@/components/CasteProcessor/CasteFilterUpload";
 import { Loader2, CheckCircle2, FileText, Search, BarChart3, Settings2 } from "lucide-react";
 
 const ProcessingOverlay = ({ step }: { step: number }) => {
@@ -70,8 +68,16 @@ const ProcessingOverlay = ({ step }: { step: number }) => {
   );
 };
 
-const API_URL = import.meta.env.VITE_API_URL ||
-  "http://localhost:5000";
+const getApiUrl = () => {
+  // If a specific remote API is configured, use it
+  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== "http://localhost:5000") {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Otherwise dynamically point to the same host that serves the frontend, but on port 5000
+  return `http://${window.location.hostname}:5000`;
+};
+
+const API_URL = getApiUrl();
 
 const Index = () => {
   const { toast } = useToast();
@@ -100,6 +106,8 @@ const Index = () => {
   const [subjectMeta, setSubjectMeta] = React.useState<
     { subject: string; section: string; faculty: string }[]
   >([]);
+
+  const [centumMeta, setCentumMeta] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -131,6 +139,7 @@ const Index = () => {
         semester: metadata?.semester || "",
         result_date: headerMeta.result_date,
         subjects: subjectMeta,
+        centum: centumMeta.length > 0 ? centumMeta : centum,
       };
 
       console.log("API URL:", API_URL);
@@ -168,6 +177,7 @@ const Index = () => {
         semester: metadata?.semester || "",
         result_date: headerMeta.result_date,
         subjects: subjectMeta,
+        centum: centumMeta.length > 0 ? centumMeta : centum,
       };
 
       console.log("API URL:", API_URL);
@@ -243,7 +253,13 @@ const Index = () => {
         setProcessingStep(prev => prev < 4 ? prev + 1 : prev);
       }, 800);
 
-      console.log("API URL:", API_URL);
+      console.log("=== FRONTEND UPLOAD DEBUG ===");
+      console.log("API URL Target:", `${API_URL}/upload`);
+      console.log("FormData Keys:", Array.from(formData.keys()));
+      console.log("Marks File:", (formData.get("marks") as File)?.name || "Missing");
+      console.log("Caste File:", (formData.get("caste") as File)?.name || "Missing");
+      console.log("UI Meta:", formData.get("ui_meta"));
+      
       const response = await fetch(`${API_URL}/upload`, {
         method: "POST",
         body: formData,
@@ -323,35 +339,13 @@ const Index = () => {
     <>
       <div className={`min-h-screen transition-all duration-500 bg-white dark:bg-gray-900 text-black dark:text-white pb-12 relative font-sans ${loading ? "blur-sm pointer-events-none scale-[0.98]" : ""}`}>
         <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-          <Tabs defaultValue="dashboard" className="w-full">
-            {/* ... rest of the component content ... */}
-            <div className="flex items-center justify-between flex-wrap gap-6 mb-10 pb-6 border-b border-gray-100 dark:border-gray-800">
-
-              <div className="ml-auto flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-inner">
-                <TabsList className="bg-transparent h-auto p-0 gap-1 border-none shadow-none">
-                  <TabsTrigger
-                    value="dashboard"
-                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
-                  >
-                    <LayoutDashboard className="w-4 h-4" /> Comprehensive Analysis
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="caste"
-                    className="rounded-xl px-6 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-lg data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-all gap-2"
-                  >
-                    <ShieldCheck className="w-4 h-4" /> Category Processing
-                  </TabsTrigger>
-                </TabsList>
-
-                <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-                <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all">
-                  {theme === "dark" ? "☀" : "🌙"}
-                </Button>
-              </div>
+            <div className="flex justify-end">
+              <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700">
+                {theme === "dark" ? "☀" : "🌙"}
+              </Button>
             </div>
 
-            <TabsContent value="dashboard" className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="flex gap-4 justify-end flex-wrap bg-gray-50/50 dark:bg-gray-900/50 p-4 rounded-3xl border border-gray-100 dark:border-gray-800 backdrop-blur-sm">
                 <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest cursor-pointer transition-all shadow-lg shadow-indigo-100 dark:shadow-none min-w-[140px] text-center">
                   1. Marks PDF
@@ -398,16 +392,11 @@ const Index = () => {
                 <TopPerformers topPerformers={topPerformers} />
                 <SubjectAnalysis subjects={subjects} onMetaChange={setSubjectMeta} />
                 <DemographicAnalysis demographics={demographics} />
-                <CentumAchievers centum={centum} />
               </div>
-            </TabsContent>
-
-            <TabsContent value="caste" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CasteFilterUpload />
-            </TabsContent>
-          </Tabs>
+              <CentumAchievers centum={centum} onCentumChange={setCentumMeta} />
+            </div>
+          </div>
         </div>
-      </div>
       {loading && <ProcessingOverlay step={processingStep} />}
     </>
   );

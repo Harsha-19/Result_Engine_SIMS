@@ -35,7 +35,7 @@ class Student:
 
         subject_fail = any(sub.is_failed() for sub in self.subjects)
 
-        self.percentage = (self.overall_total / self.overall_max) * 100
+        self.percentage = round((self.overall_total / self.overall_max) * 100, 2)
 
         if self.percentage >= 40 and not subject_fail:
             self.result = "PASS"

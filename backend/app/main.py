@@ -15,10 +15,19 @@ def normalize_usn(value):
         str(value).upper().strip()
     )
 
+def is_backlog_student(usn: str) -> bool:
+    """
+    Returns True if the USN belongs to a backlog paper.
+    Detects backlog based on the presence of 'FC' anywhere in the USN.
+    """
+    if not usn: return False
+    return "FC" in usn.upper().strip()
+
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
 
 @measure_performance
 def extract_pdf_metadata(pdf_path):
+    print("START extract_pdf_metadata", flush=True)
     logger.info("Entering extract_pdf_metadata")
     # Check cache first
     cache_key = f"meta_{get_file_stats(pdf_path)}"
@@ -60,7 +69,7 @@ def extract_pdf_metadata(pdf_path):
 
     # ================= SEMESTER =================
     semester_match = re.search(
-        r'Semester:\s*([IVX]+)',
+        r'Semester:\s*([A-Za-z0-9]+)',
         text,
         re.IGNORECASE
     )
@@ -101,10 +110,12 @@ def extract_pdf_metadata(pdf_path):
         metadata["academic_year"] = f"{year-1}-{str(year)[-2:]}"
 
     logger.info("Leaving extract_pdf_metadata")
+    print("END extract_pdf_metadata", flush=True)
     return metadata
 
 @measure_performance
 def extract_excel_data(excel_path):
+    print("START extract_excel_data", flush=True)
     logger.info("Entering extract_excel_data")
     start = time.time()
     cache_key = f"excel_{get_file_stats(excel_path)}"
@@ -183,9 +194,9 @@ def extract_excel_data(excel_path):
         for usn in student_data_map.keys()
     }
     res = (excel_usns, student_data_map)
-    ResultCache.set(cache_key, res)
     logger.info(f"Execution time: {time.time()-start}")
     logger.info("Leaving extract_excel_data")
+    print("END extract_excel_data", flush=True)
     return res
 
 # API INTERFACE
@@ -193,26 +204,34 @@ def extract_excel_data(excel_path):
 # API INTERFACE
 @measure_performance
 def process_results(pdf_path, excel_path, ui_meta=None):
+    print("START process_results", flush=True)
     logger.info("Entering process_results")
     start = time.time()
     # Global Cache Key based on both files
     cache_key = f"full_{get_file_stats(pdf_path)}_{get_file_stats(excel_path)}"
     
-    # Cache temporarily disabled so the user ALWAYS sees the logs working!
-    cached_core = None # ResultCache.get(cache_key)
+    cached_core = ResultCache.get(cache_key)
     
     if cached_core:
-        data = cached_core["data"]
+        data = cached_core
     else:
         # Not in cache, perform full extraction
         metadata = extract_pdf_metadata(pdf_path)
         students = extract_pdf_data(pdf_path)
         excel_usns, student_data_map = extract_excel_data(excel_path)
 
-        # STEP 4: BUILD PDF LOOKUP
+        # STEP 4: FILTER BACKLOGS AND BUILD PDF LOOKUP
+        regular_students = []
+        backlog_students = []
+        for s in students:
+            if is_backlog_student(s.usn):
+                backlog_students.append(s)
+            else:
+                regular_students.append(s)
+
         pdf_map = {
             normalize_usn(s.usn): s
-            for s in students
+            for s in regular_students
         }
 
         # STEP 5: MATCH USING EXCEL
@@ -251,7 +270,9 @@ def process_results(pdf_path, excel_path, ui_meta=None):
             "excel_usns": list(excel_usns),
             "validation": {
                 "excelStudents": len(excel_usns),
-                "pdfStudents": len(pdf_map),
+                "pdfStudents": len(students),
+                "regularStudents": len(regular_students),
+                "backlogStudents": len(backlog_students),
                 "matchedStudents": len(filtered_students),
                 "missingStudents": len(missing_students),
                 "missingStudentsList": missing_students
@@ -267,8 +288,11 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     print("      DYNAMIC MATCHING VALIDATION")
     print("="*40)
     print(f"Excel Students (Master): {val.get('excelStudents', 0)}")
-    print(f"PDF Students (Lookup):   {val.get('pdfStudents', 0)}")
+    print(f"Total PDF Students:      {val.get('pdfStudents', 0)}")
+    print(f"Regular Students:        {val.get('regularStudents', 0)}")
+    print(f"Backlog Students:        {val.get('backlogStudents', 0)}")
     print(f"Matched Students:        {val.get('matchedStudents', 0)}")
+    print(f"Excluded Backlogs:       {val.get('backlogStudents', 0)}")
     print(f"Missing Students:        {val.get('missingStudents', 0)}")
     print("="*40 + "\n", flush=True)
     # ---------------------------------------------------------
@@ -290,7 +314,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     
 
     # ================= 1. OVERALL SUMMARY =================
-    summary = generate_summary(filtered_students, gender_map)
+    summary, dashboard_summary = generate_summary(filtered_students, gender_map)
 
     # ================= 2. TOP RANKERS =================
     ranked_students = sorted(
@@ -314,26 +338,10 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
     subject_data = defaultdict(list)
 
-    official_subjects = {
-        "GANAKA KANNADA": "Kannada",
-        "HINDI": "Hindi",
-        "SANSKRIT": "Sanskrit",
-        "INTERNET TECHNOLOGIES LAB": "Internet Technologies Lab",
-        "INTERNET TECHNOLOGIES": "Internet Technologies",
-        "DESIGN AND ANALYSIS OF ALGORITHM LAB": "ADA Lab",
-        "DESIGN AND ANALYSIS OF ALGORITHM": "ADA",
-        "PERSONAL WEALTH MANAGEMENT": "Personal Wealth Management",
-        "SOFTWARE ENGINEERING": "Software Engineering",
-        "COMPUTER ASSEMBLY AND REPAIR": "CAR",
-    }
-
     for student in filtered_students:
         for sub in student.subjects:
-            name = sub.name.upper().strip()
-            for key in official_subjects:
-                if key in name:
-                    subject_data[official_subjects[key]].append(sub)
-                    break
+            name = sub.name.strip().title()
+            subject_data[name].append(sub)
 
     subject_list = []
     sl_no = 1
@@ -393,8 +401,20 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
     # REUSE the student_data_map from earlier extraction instead of re-reading file
     caste_map = data["student_data_map"]
-    categories = ["GENERAL", "SC", "ST", "OBC"]
-    genders = ["MALE", "FEMALE"]
+    
+    # DYNAMIC DISCOVERY OF CATEGORIES AND GENDERS
+    discovered_categories = set()
+    discovered_genders = set()
+    for usn, student_meta in caste_map.items():
+        if "category" in student_meta:
+            cat = student_meta["category"].replace(".", "").replace(" ", "").upper()
+            if cat: discovered_categories.add(cat)
+        if "gender" in student_meta:
+            gen = student_meta["gender"].replace(" ", "").upper()
+            if gen: discovered_genders.add(gen)
+            
+    categories = sorted(list(discovered_categories)) if discovered_categories else ["GENERAL", "OBC", "SC", "ST"]
+    genders = sorted(list(discovered_genders)) if discovered_genders else ["MALE", "FEMALE"]
 
     def init_block():
         return {cat: {g: 0 for g in genders} for cat in categories}
@@ -402,109 +422,66 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     appeared = init_block()
     passed = init_block()
     passed_60 = init_block()
-    for student in filtered_students:
-        usn = normalize_usn(student.usn)
-        if usn not in caste_map:
-            continue
-
-        raw_category = caste_map[usn]["category"]
-        raw_gender = caste_map[usn]["gender"]
-
-        if "SCHEDULED CASTE" in raw_category:
-            category = "SC"
-        elif "SCHEDULED TRIBE" in raw_category:
-            category = "ST"
-        elif "CATEGORY" in raw_category:
-            category = "OBC"
-        elif "GENERAL" in raw_category:
-            category = "GENERAL"
-        else:
-            continue
-
-        if raw_gender in ["M", "MALE"]:
-            gender = "MALE"
-        elif raw_gender in ["F", "FEMALE"]:
-            gender = "FEMALE"
-        else:
-            continue
-
-        appeared[category][gender] += 1
-
-    counts = {cat: {g: 0 for g in genders} for cat in categories}
 
     for student in filtered_students:
         usn = normalize_usn(student.usn)
         if usn not in caste_map:
-            # logger.debug(f"USN {usn} not found in Excel data")
             continue
 
-        raw_category = caste_map[usn].get("category", "NA").upper()
-        raw_gender = caste_map[usn].get("gender", "NA").upper()
-
-        # Flexible Mapping (Refined)
-        category = None
-        # Normalize: Remove dots and multiple spaces
-        norm_cat = raw_category.replace(".", "").replace(" ", "")
+        raw_category = caste_map[usn].get("category", "").upper()
+        raw_gender = caste_map[usn].get("gender", "").upper()
         
-        if any(k in raw_category for k in ["SCHEDULED CASTE", "SC"]) or norm_cat == "SC":
-            category = "SC"
-        elif any(k in raw_category for k in ["SCHEDULED TRIBE", "ST"]) or norm_cat == "ST":
-            category = "ST"
-        elif any(k in raw_category for k in ["CATEGORY", "CAT-", "OBC"]) or any(k in norm_cat for k in ["2A", "3A", "3B", "2B", "CAT1"]):
-            category = "OBC"
-        elif any(k in raw_category for k in ["GENERAL", "GM", "GEN"]) or norm_cat == "GM":
-            category = "GENERAL"
+        category = raw_category.replace(".", "").replace(" ", "")
+        gender = raw_gender.replace(" ", "")
         
-        gender = None
-        norm_gen = raw_gender.replace(" ", "")
-        if any(k in norm_gen for k in ["MALE", "BOY"]) or norm_gen == "M":
-            gender = "MALE"
-        elif any(k in norm_gen for k in ["FEMALE", "GIRL"]) or norm_gen == "F":
-            gender = "FEMALE"
-        
-        # LOG only failure for debugging
-        if not category or not gender:
-            # logger.debug(f"DEBUG: Skip student {usn} | Cat: '{raw_category}' mapped to {category} | Gen: '{raw_gender}' mapped to {gender}")
+        if not category or not gender or category not in categories or gender not in genders:
             continue
 
         appeared[category][gender] += 1
-        counts[category][gender] += 1
 
         if student.result == "PASS":
             passed[category][gender] += 1
+            if student.percentage >= 60:
+                passed_60[category][gender] += 1
 
-        if student.result == "PASS" and student.percentage >= 60:
-            passed_60[category][gender] += 1
-
-
-
-    logger.info(f"DEBUG: Demographic Mapping Results -> {json.dumps(counts)}")
-
+    logger.info(f"DEBUG: Demographic Mapping Results -> {json.dumps(appeared)}")
 
     demographics = {
         "appeared": appeared,
         "passed": passed,
-        "passed_60": passed_60
+        "passed_60": passed_60,
+        "meta": {
+            "categories": categories,
+            "genders": genders
+        }
     }
 
     # ================= 5. CENTUM =================
     centum_list = []
+    centum_sl = 1
     for student in filtered_students:
-        if student.overall_total == student.overall_max and student.overall_max > 0:
-            centum_list.append({
-                "name": student.name,
-                "usn": student.usn,
-                "total": student.overall_total
-            })
+        for sub in student.subjects:
+            if sub.total == sub.max_marks and sub.max_marks > 0:
+                centum_list.append({
+                    "slNo": centum_sl,
+                    "name": student.name,
+                    "usn": student.usn,
+                    "subject": sub.name.strip().title(),
+                    "marks": sub.total,
+                    "nameMissing": not bool(student.name.strip()) or student.name.strip().lower() in ["unknown student", "nan", "na"]
+                })
+                centum_sl += 1
 
     total_students = len(filtered_students)
 
     logger.info(f"Execution time: {time.time()-start}")
     logger.info("Leaving process_results")
+    print("END process_results", flush=True)
     return {
         "metadata": metadata,
         "total": total_students,
         "summary": summary,
+        "dashboard_summary": dashboard_summary,
         "rankers": rankers,
         "subjects": subject_list,
         "demographics": demographics,
@@ -527,10 +504,18 @@ def main():
     # Step 2: Extract USN + Gender from Excel
     excel_usns, gender_map = extract_excel_data(excel_path)
 
-    # Step 3: Filter matching students (Excel is master)
+    # Step 3: Filter matching students (Excel is master) and exclude backlogs
+    regular_students = []
+    backlog_students = []
+    for s in students:
+        if is_backlog_student(s.usn):
+            backlog_students.append(s)
+        else:
+            regular_students.append(s)
+
     pdf_map = {
         normalize_usn(s.usn): s
-        for s in students
+        for s in regular_students
     }
 
     filtered_students = []
@@ -550,8 +535,11 @@ def main():
 
     print("\n--- Validation ---")
     print(f"Excel Students: {len(excel_usns)}")
-    print(f"PDF Students: {len(pdf_map)}")
+    print(f"Total PDF Students: {len(students)}")
+    print(f"Regular Students: {len(regular_students)}")
+    print(f"Backlog Students: {len(backlog_students)}")
     print(f"Matched Students: {len(filtered_students)}")
+    print(f"Excluded Backlogs: {len(backlog_students)}")
     print(f"Missing Students: {len(missing_students)}")
 
     print("\n--- Filtered Students ---\n")
@@ -570,7 +558,7 @@ def main():
 
     # ================= OVERALL SUMMARY =================
 
-    summary = generate_summary(filtered_students, gender_map)
+    summary, _ = generate_summary(filtered_students, gender_map)
 
     print("\n================ OVERALL SUMMARY ================\n")
 
@@ -651,30 +639,11 @@ def main():
 
     subject_data = defaultdict(list)
 
-    #  Official subject mapping
-    official_subjects = {
-        "GANAKA KANNADA": "Kannada",
-        "HINDI": "Hindi",
-        "SANSKRIT": "Sanskrit",
-        "INTERNET TECHNOLOGIES LAB": "Internet Technologies Lab",
-        "INTERNET TECHNOLOGIES": "Internet Technologies",
-        "DESIGN AND ANALYSIS OF ALGORITHM LAB": "ADA Lab",
-        "DESIGN AND ANALYSIS OF ALGORITHM": "ADA",
-        "PERSONAL WEALTH MANAGEMENT": "Personal Wealth Management",
-        "SOFTWARE ENGINEERING": "Software Engineering",
-        "COMPUTER ASSEMBLY AND REPAIR": "CAR",
-    }
-
-    #  Group subjects using official mapping only
+    #  Group subjects dynamically
     for student in filtered_students:
         for sub in student.subjects:
-            name = sub.name.upper().strip()
-
-            for key in official_subjects:
-                if key in name:
-                    subject_data[official_subjects[key]].append(sub)
-                    break
-
+            name = sub.name.strip().title()
+            subject_data[name].append(sub)
     header = (
         f"{'SL':<4}"
         f"{'Subject Title':<35}"
@@ -747,10 +716,19 @@ def main():
     # REUSE the student_data_map from earlier extraction instead of re-reading file
     caste_map = gender_map
 
-    categories = ["GENERAL", "SC", "ST", "OBC"]
-
-
-    genders = ["MALE", "FEMALE"]
+    # DYNAMIC DISCOVERY OF CATEGORIES AND GENDERS
+    discovered_categories = set()
+    discovered_genders = set()
+    for usn, student_meta in caste_map.items():
+        if "category" in student_meta:
+            cat = student_meta["category"].replace(".", "").replace(" ", "").upper()
+            if cat: discovered_categories.add(cat)
+        if "gender" in student_meta:
+            gen = student_meta["gender"].replace(" ", "").upper()
+            if gen: discovered_genders.add(gen)
+            
+    categories = sorted(list(discovered_categories)) if discovered_categories else ["GENERAL", "OBC", "SC", "ST"]
+    genders = sorted(list(discovered_genders)) if discovered_genders else ["MALE", "FEMALE"]
 
     def init_block():
         return {cat: {g: 0 for g in genders} for cat in categories}
@@ -765,36 +743,13 @@ def main():
         if usn not in caste_map:
             continue
 
-        data = caste_map[usn]
-        raw_category = data["category"].strip().upper()
-        if "SCHEDULED CASTE" in raw_category:
-            category = "SC"
-        elif "SCHEDULED TRIBE" in raw_category:
-            category = "ST"
-        elif "CATEGORY I" in raw_category \
-            or "CATEGORY II" in raw_category \
-            or "CATEGORY III" in raw_category:
-            category = "OBC"
-        elif "GENERAL" in raw_category:
-            category = "GENERAL"
-        else:
-            continue
-
-
-
-        raw_gender = data["gender"]
-
-        # Normalize gender safely
-        if raw_gender in ["M", "MALE"]:
-            gender = "MALE"
-        elif raw_gender in ["F", "FEMALE"]:
-            gender = "FEMALE"
-        elif raw_gender in ["T", "TRANS", "TRANSGENDER"]:
-            gender = "TRANS"
-        else:
-            continue
-
-        if category not in categories:
+        raw_category = caste_map[usn].get("category", "").upper()
+        raw_gender = caste_map[usn].get("gender", "").upper()
+        
+        category = raw_category.replace(".", "").replace(" ", "")
+        gender = raw_gender.replace(" ", "")
+        
+        if not category or not gender or category not in categories or gender not in genders:
             continue
 
         # Appeared

@@ -22,6 +22,7 @@ from app.services.performance_utils import (
 )
 from app.services.worker_pool import run_in_background
 
+print("===== NEW BACKEND BUILD LOADED =====")
 app = Flask(__name__)
 
 # --- IN-MEMORY DUPLICATE TRACKER ---
@@ -29,7 +30,7 @@ PROCESSED_HASHES = set()
 
 # --- FEATURE FLAGS ---
 USE_ASYNC = os.environ.get("USE_ASYNC", "False").lower() == "true"
-ENABLE_CACHE = os.environ.get("ENABLE_CACHE", "True").lower() == "true"
+ENABLE_CACHE = False
 
 CORS(
     app,
@@ -69,7 +70,7 @@ def health():
 @app.route("/test")
 def test():
     print("TEST ROUTE HIT")
-    return {"message": "backend working"}
+    return {"message": "Backend Build XYZ"}
 
 
 @app.route("/")
@@ -85,108 +86,12 @@ def home():
     )
 
 
-# --- CASTE-BASED FILTERING SYSTEM ---
-ALLOWED_CASTES = ["General", "OBC", "SC", "ST"]
-
-
-@app.route("/upload-caste-filter", methods=["POST"])
-def upload_caste_filter():
-    file = request.files.get("file")
-    caste = request.form.get("caste")
-
-    # Validation
-    if not file or not file.filename.lower().endswith(".pdf"):
-        return jsonify({"success": False, "message": "Only PDF files are allowed"}), 400
-
-    if not caste or caste not in ALLOWED_CASTES:
-        return jsonify(
-            {
-                "success": False,
-                "message": f"Valid Caste category is required {ALLOWED_CASTES}",
-            }
-        ), 400
-
-    # Secure Storage with Timestamp
-    timestamp = int(time.time())
-    file_id = secure_filename(file.filename)
-    filename = f"result_{timestamp}_{file_id}"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-
-    try:
-        # Process and filter the results
-        filtered_data = process_caste_result(filepath, caste)
-
-        return jsonify(
-            {
-                "success": True,
-                "message": "File uploaded and processed successfully",
-                "data": filtered_data,
-                "fileName": filename,
-                "caste": caste,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Processing error: {str(e)}")
-        return jsonify(
-            {"success": False, "message": f"Processing error: {str(e)}"}
-        ), 500
-
-
-def process_caste_result(file_path, target_caste):
-    """
-    Extracts data from the PDF and applies caste-based filtering.
-    """
-    # Use existing extraction logic
-    students = extract_pdf_data(file_path)
-
-    processed_results = []
-
-    for student in students:
-        # student objects from extract_pdf_data already have USN, Name and Marks.
-        # We need to map them to a caste.
-        # In this standalone feature, we will use a deterministic mock based on the USN suffix for demo purposes,
-        # or you can integrate your DB lookup here.
-
-        # Simple deterministic mapping for demo/integration
-        usn_id = int("".join(filter(str.isdigit, student.usn)) or "0")
-        student_caste = ALLOWED_CASTES[usn_id % len(ALLOWED_CASTES)]
-
-        if student_caste.upper() == target_caste.upper():
-            processed_results.append(
-                {
-                    "name": student.name,
-                    "usn": student.usn,
-                    "overall_total": student.overall_total,
-                    "overall_max": student.overall_max,
-                    "percentage": round(student.percentage, 2),
-                    "result": student.result,
-                }
-            )
-
-    return {"total_filtered": len(processed_results), "students": processed_results}
-
-
-@app.route("/files", methods=["GET"])
-def list_files():
-    files = os.listdir(UPLOAD_FOLDER)
-    pdf_files = [f for f in files if f.endswith(".pdf")]
-    return jsonify({"success": True, "files": pdf_files})
-
-
-@app.route("/files/<filename>", methods=["DELETE"])
-def delete_file(filename):
-    filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
-    if os.path.exists(filepath):
-        os.remove(filepath)
-        return jsonify({"success": True, "message": f"Deleted {filename}"})
-    return jsonify({"success": False, "message": "File not found"}), 404
-
-
 # ===================== UPLOAD =====================
 @app.route("/upload", methods=["POST"])
 @measure_performance
 def upload():
+    print("UPLOAD ROUTE EXECUTED")
+    print("REQUEST RECEIVED", flush=True)
     logger.info("UPLOAD REQUEST RECEIVED")
     start = time.time()
     
@@ -202,11 +107,18 @@ def upload():
     if not marks_file or not caste_file:
         return jsonify({"error": "Both files required"}), 400
 
+    print("FILES RECEIVED", flush=True)
+
     ui_meta = json.loads(ui_meta) if ui_meta else None
 
     # Performance: Only read bytes once
     marks_bytes = marks_file.read()
     caste_bytes = caste_file.read()
+
+    print(f"PDF filename: {marks_file.filename}", flush=True)
+    print(f"Excel filename: {caste_file.filename}", flush=True)
+    print(f"PDF size: {len(marks_bytes)} bytes", flush=True)
+    print(f"Excel size: {len(caste_bytes)} bytes", flush=True)
 
     # Combined hash for cache lookup (Instant retrieval for same files)
     current_hash = get_file_hash(marks_bytes + caste_bytes)
@@ -231,10 +143,53 @@ def upload():
     app.config["UI_META"] = ui_meta
 
     # CORE DATA EXTRACTION (Cached internally within process_results)
-    results = process_results(marks_path, caste_path, ui_meta)
+    future = run_in_background(process_results, marks_path, caste_path, ui_meta)
+    results = future.result()
 
     logger.info("Response generated.")
     logger.info(f"Execution time: {time.time()-start}")
+    print("RETURNING RESPONSE", flush=True)
+
+    print("\n" + "="*40)
+    print("      API PAYLOAD TRACE")
+    print("="*40)
+    print(f"Total students: {results.get('total', 0)}")
+    
+    # Subjects Check
+    subs = results.get('subjects', [])
+    print(f"Subject Count = {len(subs)}")
+    print("Detected Subjects:")
+    for sub in subs:
+        print(f"- {sub.get('subject', 'Unknown')}")
+        
+    # Toppers Check
+    rankers = results.get('rankers', [])
+    print(f"\nTop Performers Count = {len(rankers)}")
+    print("First 3 Rankers Data:")
+    for r in rankers[:3]:
+        print(f"USN: {r.get('registrationNo')}, Name: {r.get('name')}, Total: {r.get('marksObtained')}, Pct: {r.get('percentage')}")
+
+    # Demographics Check
+    demo = results.get('demographics', {})
+    print("\nDemographics Data:")
+    print(f"Keys: {list(demo.keys())}")
+    print(f"Appeared: {demo.get('appeared')}")
+    print(f"Passed: {demo.get('passed')}")
+    print(f"Passed 60+: {demo.get('passed_60')}")
+    if 'meta' in demo:
+        print(f"Categories detected: {demo['meta'].get('categories')}")
+        print(f"Genders detected: {demo['meta'].get('genders')}")
+        
+    # Centum Check
+    centums = results.get('centum', [])
+    print(f"\nCentum Achievers Count = {len(centums)}")
+    if centums:
+        for c in centums[:5]:
+            print(f"- {c.get('name')} in {c.get('subject')} ({c.get('marks')})")
+    else:
+        print("No centum achievers found in this dataset.")
+    print("="*40 + "\n")
+
     return jsonify(results)
 
 
@@ -298,6 +253,21 @@ def generate_doc_report():
     subjects = data["subjects"]
     demographics = data["demographics"]
     centum = data["centum"]
+    if ui_meta and ui_meta.get("centum"):
+        # Map ui_meta's manually edited centum names by USN to override
+        manual_centum_map = {c.get("usn"): c.get("name") for c in ui_meta["centum"] if c.get("name")}
+        for c in centum:
+            if c["usn"] in manual_centum_map:
+                c["name"] = manual_centum_map[c["usn"]]
+
+    # Final Integrity Check for Unique USN-to-Name Mapping
+    student_lookup = {}
+    for c in centum:
+        usn = c["usn"]
+        name = c["name"]
+        if usn in student_lookup and student_lookup[usn] != name:
+            print(f"Validation Error: USN {usn} maps to multiple names ({student_lookup[usn]} and {name})")
+        student_lookup[usn] = name
 
     # ============ HEADER FILL ============
 
@@ -538,7 +508,7 @@ def generate_doc_report():
         row[0].text = str(i + 1)
         row[1].text = c["name"]
         row[2].text = c["usn"]
-        row[3].text = str(c["total"])
+        row[3].text = str(c.get("marks", c.get("total", "")))
 
     doc.save(output_path)
 

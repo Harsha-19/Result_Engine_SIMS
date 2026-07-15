@@ -7,15 +7,14 @@ from app.services.performance_utils import measure_performance, logger
 # 🔹 Pre-compiled patterns for high performance extraction
 USN_PATTERN = re.compile(r"(U\d{2}[A-Z]{2}\d{2}S\d{4})")
 NAME_PATTERN = re.compile(r"Student Name:\s*(.+)")
-DIR_JUNK_PATTERN = re.compile(r"\b(BCA-|BSC/BCA/FAD/ID|BCA/FAD-HIN-4S|BCA/BHM-SAN-4S|BBA\sOE\d+|ENG-OE\d+)")
-MARK_JUNK_PATTERN = re.compile(r"\d+\s*\+\s*\d+.*")
-PROGRAMS_PATTERN = re.compile(r"\b(BSC|BCA|FAD|ID)\b$")
+
 # Correct subject pattern for extraction
 SUBJECT_PARSE_PATTERN = re.compile(r"([A-Z0-9\-\/]+)\s+([A-Z &\-/]+?)\s+(\d+)\s*\+\s*(\d+)\s+0\s+(\d+)\s+(\d+)")
 
 @measure_performance
 def extract_pdf_data(pdf_path):
     """Memory-efficient PDF extraction with regex-optimized processing."""
+    print("START extract_pdf_data", flush=True)
     logger.info("Entering extract_pdf_data")
     start = time.time()
     students = []
@@ -23,16 +22,21 @@ def extract_pdf_data(pdf_path):
     
     # 1. Parallel-ready text extraction
     with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
+        total_pages = len(pdf.pages)
+        print(f"Total pages: {total_pages}", flush=True)
+        for i, page in enumerate(pdf.pages):
             p_text = page.extract_text()
             if p_text:
                 text_chunks.append(p_text)
+            print(f"Extracted page {i+1}/{total_pages}", flush=True)
     
     full_text = "\n".join(text_chunks)
     text_chunks = None # Clear memory
+    print("Text extraction complete, starting regex split", flush=True)
     
     # 2. Split PDF by USN blocks using optimized regex
     usn_blocks = USN_PATTERN.split(full_text)
+    print(f"Regex split complete, {len(usn_blocks)} blocks found", flush=True)
     
     # Iterate through blocks (usn, block_content, usn, block_content...)
     for i in range(1, len(usn_blocks), 2):
@@ -45,11 +49,11 @@ def extract_pdf_data(pdf_path):
         name_match = NAME_PATTERN.search(block)
         if name_match:
             raw_line = name_match.group(1).strip()
-            # Multi-stage cleaning for accuracy
-            raw_line = DIR_JUNK_PATTERN.split(raw_line)[0].strip()
-            raw_line = MARK_JUNK_PATTERN.sub("", raw_line).strip()
-            raw_line = PROGRAMS_PATTERN.sub("", raw_line).strip()
-            student.name = raw_line
+            sub_match = SUBJECT_PARSE_PATTERN.search(raw_line)
+            if sub_match:
+                student.name = raw_line[:sub_match.start()].strip()
+            else:
+                student.name = raw_line
         else:
             student.name = "Unknown Student"
 
@@ -72,6 +76,7 @@ def extract_pdf_data(pdf_path):
     logger.info("PDF parsed.")
     logger.info(f"Execution time: {time.time()-start}")
     logger.info("Leaving extract_pdf_data")
+    print("END extract_pdf_data", flush=True)
     return students
 
 def get_clean_subject_title(subject):

@@ -1,15 +1,49 @@
 import React from "react";
 
-interface CentumProps {
-  centum: {
-    slNo: number;
-    name: string;
-    usn: string;
-    subject: string;
-  }[];
+export interface CentumStudent {
+  slNo: number;
+  name: string;
+  usn: string;
+  subject: string;
+  nameMissing?: boolean;
 }
 
-export const CentumAchievers: React.FC<CentumProps> = ({ centum }) => {
+interface CentumProps {
+  centum: CentumStudent[];
+  onCentumChange?: (updatedCentum: CentumStudent[]) => void;
+}
+
+export const CentumAchievers: React.FC<CentumProps> = ({ centum, onCentumChange }) => {
+  const [localNames, setLocalNames] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    const initial: Record<string, string> = {};
+    centum.forEach((student) => {
+      // Initialize with existing USN mapping
+      if (!initial[student.usn]) {
+        initial[student.usn] = student.name || "";
+      }
+    });
+    setLocalNames(initial);
+  }, [centum]);
+
+  React.useEffect(() => {
+    if (onCentumChange && centum.length > 0) {
+      const updatedCentum = centum.map((student) => ({
+        ...student,
+        name: localNames[student.usn] || student.name || "Name Not Provided",
+      }));
+      onCentumChange(updatedCentum);
+    }
+  }, [localNames, centum, onCentumChange]);
+
+  const updateName = (usn: string, value: string) => {
+    setLocalNames((prev) => ({
+      ...prev,
+      [usn]: value,
+    }));
+  };
+
   return (
     <div className="bg-card p-8 rounded-3xl shadow-lg border border-border/50 space-y-6">
       <h3 className="text-2xl font-bold flex items-center gap-2">
@@ -25,16 +59,28 @@ export const CentumAchievers: React.FC<CentumProps> = ({ centum }) => {
             <thead>
               <tr className="bg-gradient-to-r from-primary to-blue-600 text-white">
                 <th className="p-3 rounded-tl-2xl">Sl.No</th>
-                <th className="p-3">Name</th>
-                <th className="p-3">Registration No.</th>
-                <th className="p-3 rounded-tr-2xl">Subject</th>
+                <th className="p-3 text-left">Name</th>
+                <th className="p-3 text-center">Registration No.</th>
+                <th className="p-3 rounded-tr-2xl text-left">Subject</th>
               </tr>
             </thead>
             <tbody>
               {centum.map((student) => (
-                <tr key={student.slNo} className="border-b">
+                <tr key={student.slNo} className="border-b hover:bg-muted/30 transition">
                   <td className="p-3 text-center">{student.slNo}</td>
-                  <td className="p-3 font-medium">{student.name}</td>
+                  <td className="p-3 font-medium">
+                    {student.nameMissing ? (
+                      <input
+                        type="text"
+                        placeholder="Enter Student Name"
+                        className="w-full bg-muted rounded-md px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        value={localNames[student.usn] || ""}
+                        onChange={(e) => updateName(student.usn, e.target.value)}
+                      />
+                    ) : (
+                      <span>{student.name}</span>
+                    )}
+                  </td>
                   <td className="p-3 text-center">{student.usn}</td>
                   <td className="p-3">{student.subject}</td>
                 </tr>
