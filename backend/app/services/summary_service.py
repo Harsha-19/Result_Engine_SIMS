@@ -77,16 +77,16 @@ def update_counts(block, student, flat_summary=None):
         if flat_summary is not None:
             flat_summary["passed"] += 1
 
-        if 85 <= student.percentage <= 100:
+        if student.classification == "Distinction":
             block["distinction"] += 1
             if flat_summary is not None: flat_summary["distinction"] += 1
-        elif 60 <= student.percentage < 85:
+        elif student.classification == "First Class":
             block["first"] += 1
             if flat_summary is not None: flat_summary["first_class"] += 1
-        elif 50 <= student.percentage < 60:
+        elif student.classification == "Second Class":
             block["second"] += 1
             if flat_summary is not None: flat_summary["second_class"] += 1
-        elif 40 <= student.percentage < 50:
+        elif student.classification == "Pass Class":
             block["pass_class"] += 1
             if flat_summary is not None: flat_summary["pass_class"] += 1
 

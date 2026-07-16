@@ -15,13 +15,16 @@ def normalize_usn(value):
         str(value).upper().strip()
     )
 
-def is_backlog_student(usn: str) -> bool:
+def extract_joining_year(usn: str):
     """
-    Returns True if the USN belongs to a backlog paper.
-    Detects backlog based on the presence of 'FC' anywhere in the USN.
+    Dynamically extracts the joining year from a USN.
+    Example: U03KU24S0126 -> 24
     """
-    if not usn: return False
-    return "FC" in usn.upper().strip()
+    if not usn: return None
+    match = re.search(r"U\d{2}[A-Z]{2}(\d{2})S\d+", str(usn).upper().strip())
+    if match:
+        return int(match.group(1))
+    return None
 
 from app.services.performance_utils import measure_performance, ResultCache, get_file_stats, logger
 
@@ -218,16 +221,51 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         # Not in cache, perform full extraction
         metadata = extract_pdf_metadata(pdf_path)
         students = extract_pdf_data(pdf_path)
+        
+        # --- DIAGNOSTIC LOGS START ---
+        print("\n========== RAW SUBJECTS FROM PDF ==========\n")
+        for student in students:
+            print(f"USN: {student.usn}")
+            for subject in student.subjects:
+                print(f"    {repr(subject.name)}")
+
+        print("\n========== UNIQUE SUBJECTS DETECTED ==========\n")
+        unique_subjects = sorted({
+            subject.name.strip()
+            for student in students
+            for subject in student.subjects
+        })
+        for subject in unique_subjects:
+            print(f"- {subject}")
+        print(f"\nTotal Unique Subjects: {len(unique_subjects)}")
+
+        print("\n========== SUBJECT COUNT ==========\n")
+        for student in students:
+            print(f"{student.usn} -> {len(student.subjects)} subjects")
+        # --- DIAGNOSTIC LOGS END ---
+
         excel_usns, student_data_map = extract_excel_data(excel_path)
 
-        # STEP 4: FILTER BACKLOGS AND BUILD PDF LOOKUP
+        # STEP 4: DYNAMIC BATCH FILTERING AND BUILD PDF LOOKUP
+        joining_years = {}
+        for s in students:
+            yr = extract_joining_year(s.usn)
+            if yr is not None:
+                joining_years[yr] = joining_years.get(yr, 0) + 1
+
+        current_batch = max(joining_years.keys()) if joining_years else None
+
         regular_students = []
         backlog_students = []
+        ignored_usns = []
+
         for s in students:
-            if is_backlog_student(s.usn):
-                backlog_students.append(s)
-            else:
+            yr = extract_joining_year(s.usn)
+            if yr == current_batch:
                 regular_students.append(s)
+            else:
+                backlog_students.append(s)
+                ignored_usns.append(s.usn)
 
         pdf_map = {
             normalize_usn(s.usn): s
@@ -275,7 +313,10 @@ def process_results(pdf_path, excel_path, ui_meta=None):
                 "backlogStudents": len(backlog_students),
                 "matchedStudents": len(filtered_students),
                 "missingStudents": len(missing_students),
-                "missingStudentsList": missing_students
+                "missingStudentsList": missing_students,
+                "currentBatch": current_batch,
+                "joiningYears": joining_years,
+                "ignoredUsns": ignored_usns
             }
         }
         ResultCache.set(cache_key, data)
@@ -285,14 +326,21 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     # ---------------------------------------------------------
     val = data.get("validation", {})
     print("\n" + "="*40)
-    print("      DYNAMIC MATCHING VALIDATION")
+    print("      DYNAMIC BATCH & MATCHING VALIDATION")
     print("="*40)
+    print(f"Detected Joining Years:\n{json.dumps(val.get('joiningYears', {}), indent=2)}")
+    print(f"Detected Current Batch:  {val.get('currentBatch', 'N/A')}")
+    print(f"Students Before Filter:  {val.get('pdfStudents', 0)}")
+    print(f"Students After Filter:   {val.get('regularStudents', 0)}")
+    print(f"Ignored Students:        {val.get('backlogStudents', 0)}")
+    
+    ignored = val.get('ignoredUsns', [])
+    if ignored:
+        print(f"Ignored USNs:\n{json.dumps(ignored, indent=2)}")
+        
+    print("-" * 40)
     print(f"Excel Students (Master): {val.get('excelStudents', 0)}")
-    print(f"Total PDF Students:      {val.get('pdfStudents', 0)}")
-    print(f"Regular Students:        {val.get('regularStudents', 0)}")
-    print(f"Backlog Students:        {val.get('backlogStudents', 0)}")
     print(f"Matched Students:        {val.get('matchedStudents', 0)}")
-    print(f"Excluded Backlogs:       {val.get('backlogStudents', 0)}")
     print(f"Missing Students:        {val.get('missingStudents', 0)}")
     print("="*40 + "\n", flush=True)
     # ---------------------------------------------------------
@@ -334,6 +382,12 @@ def process_results(pdf_path, excel_path, ui_meta=None):
         })
 
     # ================= 3. SUBJECT-WISE =================
+    # --- DIAGNOSTIC LOGS START ---
+    print("\n========== PROCESS_RESULTS: SUBJECT COUNT BEFORE AGGREGATION ==========\n")
+    for student in filtered_students:
+        print(f"{student.usn} -> {len(student.subjects)} subjects")
+    # --- DIAGNOSTIC LOGS END ---
+
     from collections import defaultdict
 
     subject_data = defaultdict(list)
@@ -441,7 +495,7 @@ def process_results(pdf_path, excel_path, ui_meta=None):
 
         if student.result == "PASS":
             passed[category][gender] += 1
-            if student.percentage >= 60:
+            if student.cgpa >= 6.0:
                 passed_60[category][gender] += 1
 
     logger.info(f"DEBUG: Demographic Mapping Results -> {json.dumps(appeared)}")
@@ -477,6 +531,29 @@ def process_results(pdf_path, excel_path, ui_meta=None):
     logger.info(f"Execution time: {time.time()-start}")
     logger.info("Leaving process_results")
     print("END process_results", flush=True)
+
+    # --- DIAGNOSTIC LOGS START ---
+    print("\n=================================================")
+    print(f"Students Parsed:\n{len(filtered_students)}")
+    total_subjects = sum(len(student.subjects) for student in filtered_students)
+    print(f"\nTotal Subject Entries:\n{total_subjects}")
+    unique_subs = sorted({
+        subject.name.strip()
+        for student in filtered_students
+        for subject in student.subjects
+    })
+    print(f"\nUnique Subjects:\n{len(unique_subs)}")
+    print("\nSubject Names:")
+    for sub in unique_subs:
+        print(f"- {sub}")
+    print("=================================================\n")
+    # --- DIAGNOSTIC LOGS END ---
+    print("\n========== SUBJECT RESPONSE ==========\n")
+    print(type(subject_list))
+    print(len(subject_list))
+    for subject in subject_list:
+        print(subject)
+    
     return {
         "metadata": metadata,
         "total": total_students,
@@ -504,14 +581,26 @@ def main():
     # Step 2: Extract USN + Gender from Excel
     excel_usns, gender_map = extract_excel_data(excel_path)
 
-    # Step 3: Filter matching students (Excel is master) and exclude backlogs
+    # Step 3: Filter matching students (Excel is master) and exclude older batches
+    joining_years = {}
+    for s in students:
+        yr = extract_joining_year(s.usn)
+        if yr is not None:
+            joining_years[yr] = joining_years.get(yr, 0) + 1
+
+    current_batch = max(joining_years.keys()) if joining_years else None
+
     regular_students = []
     backlog_students = []
+    ignored_usns = []
+
     for s in students:
-        if is_backlog_student(s.usn):
-            backlog_students.append(s)
-        else:
+        yr = extract_joining_year(s.usn)
+        if yr == current_batch:
             regular_students.append(s)
+        else:
+            backlog_students.append(s)
+            ignored_usns.append(s.usn)
 
     pdf_map = {
         normalize_usn(s.usn): s
@@ -534,12 +623,17 @@ def main():
         s.calculate_result()
 
     print("\n--- Validation ---")
+    print(f"Detected Joining Years:\n{json.dumps(joining_years, indent=2)}")
+    print(f"Detected Current Batch: {current_batch}")
+    print(f"Students Before Filter: {len(students)}")
+    print(f"Students After Filter: {len(regular_students)}")
+    print(f"Ignored Students: {len(backlog_students)}")
+    if ignored_usns:
+        print(f"Ignored USNs:\n{json.dumps(ignored_usns, indent=2)}")
+    print("-" * 40)
     print(f"Excel Students: {len(excel_usns)}")
     print(f"Total PDF Students: {len(students)}")
-    print(f"Regular Students: {len(regular_students)}")
-    print(f"Backlog Students: {len(backlog_students)}")
     print(f"Matched Students: {len(filtered_students)}")
-    print(f"Excluded Backlogs: {len(backlog_students)}")
     print(f"Missing Students: {len(missing_students)}")
 
     print("\n--- Filtered Students ---\n")
@@ -759,8 +853,8 @@ def main():
         if student.result == "PASS":
             passed[category][gender] += 1
 
-        # Passed with 60%+
-        if student.result == "PASS" and student.percentage >= 60:
+        # Passed with First Class+
+        if student.result == "PASS" and student.cgpa >= 6.0:
             passed_60[category][gender] += 1
 
     def print_block(title, block):
@@ -786,7 +880,7 @@ def main():
         print()
     print_block("Total Number of Students Appeared:", appeared)
     print_block("Total Number of Students Passed:", passed)
-    print_block("Out of Total, Students Passed with 60% or above:", passed_60)
+    print_block("Students Passed with First Class or Above (CGPA >= 6.00):", passed_60)
     print("\n==========================================================================\n")
 
 

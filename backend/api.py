@@ -510,6 +510,32 @@ def generate_doc_report():
         row[2].text = c["usn"]
         row[3].text = str(c.get("marks", c.get("total", "")))
 
+    # ============ LABEL REPLACEMENT ============
+    def replace_text_in_doc(doc_obj, replacements):
+        for p in doc_obj.paragraphs:
+            for old_text, new_text in replacements.items():
+                if old_text in p.text:
+                    p.text = p.text.replace(old_text, new_text)
+                    
+        for table in doc_obj.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        for old_text, new_text in replacements.items():
+                            if old_text in p.text:
+                                p.text = p.text.replace(old_text, new_text)
+
+    # Perform the requested label replacements
+    replacements_dict = {
+        "Students Passed with 60% or Above": "Students Passed with First Class or Above (CGPA ≥ 6.00)",
+        "Out of Total, Students Passed with 60% or above": "Students Passed with First Class or Above (CGPA ≥ 6.00)",
+        "Distinction": "Distinction (CGPA ≥ 8.00)",
+        "First Class": "First Class (CGPA 6.00–7.99)",
+        "Second Class": "Second Class (CGPA 5.00–5.99)",
+        "Pass Class": "Pass Class (CGPA 4.00–4.99)"
+    }
+    replace_text_in_doc(doc, replacements_dict)
+
     doc.save(output_path)
 
     return send_file(output_path, as_attachment=True)

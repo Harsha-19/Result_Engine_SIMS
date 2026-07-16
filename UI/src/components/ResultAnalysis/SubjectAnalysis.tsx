@@ -73,6 +73,9 @@ export const SubjectAnalysis: React.FC<Props> = ({ subjects, onMetaChange }) => 
     }));
   };
 
+  console.log("========== SUBJECT ANALYSIS RENDER ==========");
+  console.log(`Rendering ${subjects.length} subjects in UI`);
+
   return (
     <div className="bg-card p-8 rounded-3xl shadow-lg border border-border/50">
       <h2 className="text-2xl font-bold mb-6">

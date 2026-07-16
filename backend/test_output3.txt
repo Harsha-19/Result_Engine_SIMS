@@ -1,0 +1,173 @@
+START extract_pdf_data
+2026-07-15 13:00:23,878 - performance - INFO - Entering extract_pdf_data
+Total pages: 67
+Extracted page 1/67
+Extracted page 2/67
+Extracted page 3/67
+Extracted page 4/67
+Extracted page 5/67
+Extracted page 6/67
+Extracted page 7/67
+Extracted page 8/67
+Extracted page 9/67
+Extracted page 10/67
+Extracted page 11/67
+Extracted page 12/67
+Extracted page 13/67
+Extracted page 14/67
+Extracted page 15/67
+Extracted page 16/67
+Extracted page 17/67
+Extracted page 18/67
+Extracted page 19/67
+Extracted page 20/67
+Extracted page 21/67
+Extracted page 22/67
+Extracted page 23/67
+Extracted page 24/67
+Extracted page 25/67
+Extracted page 26/67
+Extracted page 27/67
+Extracted page 28/67
+Extracted page 29/67
+Extracted page 30/67
+Extracted page 31/67
+Extracted page 32/67
+Extracted page 33/67
+Extracted page 34/67
+Extracted page 35/67
+Extracted page 36/67
+Extracted page 37/67
+Extracted page 38/67
+Extracted page 39/67
+Extracted page 40/67
+Extracted page 41/67
+Extracted page 42/67
+Extracted page 43/67
+Extracted page 44/67
+Extracted page 45/67
+Extracted page 46/67
+Extracted page 47/67
+Extracted page 48/67
+Extracted page 49/67
+Extracted page 50/67
+Extracted page 51/67
+Extracted page 52/67
+Extracted page 53/67
+Extracted page 54/67
+Extracted page 55/67
+Extracted page 56/67
+Extracted page 57/67
+Extracted page 58/67
+Extracted page 59/67
+Extracted page 60/67
+Extracted page 61/67
+Extracted page 62/67
+Extracted page 63/67
+Extracted page 64/67
+Extracted page 65/67
+Extracted page 66/67
+Extracted page 67/67
+Text extraction complete, starting regex split
+Regex split complete, 263 blocks found
+2026-07-15 13:00:34,630 - performance - INFO - PDF parsed.
+2026-07-15 13:00:34,630 - performance - INFO - Execution time: 10.751118421554565
+2026-07-15 13:00:34,630 - performance - INFO - Leaving extract_pdf_data
+END extract_pdf_data
+2026-07-15 13:00:34,630 - performance - INFO - PERF: extract_pdf_data executed in 10.7423 seconds
+START extract_excel_data
+2026-07-15 13:00:34,630 - performance - INFO - Entering extract_excel_data
+2026-07-15 13:00:34,829 - performance - INFO - Excel Header detected at row index: 0
+2026-07-15 13:00:34,858 - performance - INFO - Excel Parsed -> Students: 445, Subjects: 6, Columns: ['SL NO', 'REGISRATION NO', 'PROGRAM LEVEL', 'PROGRAM', 'DISCIPLINE', 'STUDENT NAME', 'MOBILE NUMBER', 'EMAIL ID', 'GENDER', 'CASTE']
+2026-07-15 13:00:34,862 - performance - INFO - Excel parsed.
+2026-07-15 13:00:34,875 - performance - INFO - Execution time: 0.24570393562316895
+2026-07-15 13:00:34,875 - performance - INFO - Leaving extract_excel_data
+END extract_excel_data
+2026-07-15 13:00:34,875 - performance - INFO - PERF: extract_excel_data executed in 0.2458 seconds
+
+--- Validation ---
+Detected Joining Years:
+{
+  "24": 131
+}
+Detected Current Batch: 24
+Students Before Filter: 131
+Students After Filter: 131
+Ignored Students: 0
+----------------------------------------
+Excel Students: 443
+Total PDF Students: 131
+Matched Students: 0
+Missing Students: 443
+
+--- Filtered Students ---
+
+
+================ OVERALL SUMMARY ================
+
+Category  Appeared  Dist    First   Second  PassCls Passed  Failed  NA    Pass %  
+----------------------------------------------------------------------------------
+Boys      0         0       0       0       0       0       0       0     0%
+Girls     0         0       0       0       0       0       0       0     0%
+Total     0         0       0       0       0       0       0       0     0%
+
+=================================================
+
+
+================ TOP RANKERS ================
+
+Rank  Name                     Registration No.  Marks Obtained    Percentage  
+-------------------------------------------------------------------------------
+
+=============================================
+
+
+================ SUBJECT-WISE ANALYSIS ================
+
+SL  Subject Title                      Section   Faculty Name        Passed  Failed  Absent  Centum  Pass %    Topper %  
+-------------------------------------------------------------------------------------------------------------------------
+
+========================================================
+
+
+================ IV. PERFORMANCE ANALYSIS BY DEMOGRAPHICS ================
+
+
+Total Number of Students Appeared:
+
+          ACHARI    ADIDRAVIDAADIKARNATAKAAGASA     ARYAVYSYA BAJANTHRI BALAJIGA/BANAJIGA/GOUDABANAJIGABALAJIGA/BANAJIGA/GOWDABANAJIGABALIJA    BANJARA   BESTHA    BESTHAR   BHAVASARAKSHATRIYABHOVI     BILLAVA   BRAHMIN   BUNT/BANT CHRISTIAN DASVOKKALIGADEVADIGA  DEVANGA   EDIGA     EZHAVA    GANGADKARVOKKALIGAGANIGA    GOLLA     GOUDA     GOUDA/GOWDAGOWNDER   HINDUSADRU/SADARU/SADUMATA/SADKULA/SADAR/SADUGOWDA/SADUGOWDAR/SADAR/SADARI/SADARAGOWDAJOGI      KAIKOLAN/SENGUNDHARKAPU      KORAMA    KSHATRIYA/KSHATRIKSHATRIYAMARATHAKUMBARA   KUNCHITIGAKURUBA    KURUHINASETTYLAMBANI   LINGAYAT/VEERASHAIVA-VEERASHAIVAPANCHAMASALILINGAYATAAGASALINGAYATAPANCHALAMADIGA    MADIVALA  MALA      MALERU    MARATAMARATHAMUSLIM    NADAR     NAIDU     NAN       NAYAKA    NAYAR     PADMASALE/PADMASHALI/PADMASALIPANCHAL   PHULARI   POOJARI   RAJAPUT   RAMAKSHATRIYAREDDY     REDDY(BALIJA)SADARAGOWDASETTYBALIJA/SETTYBANAJIGA/BANAJIGASETTYTHIGALA   THOGATA/THOGATARU/THOGATIGA/THOGATAVEERA/THOGATAGERA/THOGATAVEERAKSHATRAIYA/THOGAJAPUSHPANJALITIGALA    UPPARA    VAISHNAVA VAKKALIGA VALMIKI   VANNIAR   VEERASHAIVALINGAYATVISHWAKARMAVOKKALIGA YADAV     YADAVA    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Female    0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+Male      0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total     0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+
+Total Number of Students Passed:
+
+          ACHARI    ADIDRAVIDAADIKARNATAKAAGASA     ARYAVYSYA BAJANTHRI BALAJIGA/BANAJIGA/GOUDABANAJIGABALAJIGA/BANAJIGA/GOWDABANAJIGABALIJA    BANJARA   BESTHA    BESTHAR   BHAVASARAKSHATRIYABHOVI     BILLAVA   BRAHMIN   BUNT/BANT CHRISTIAN DASVOKKALIGADEVADIGA  DEVANGA   EDIGA     EZHAVA    GANGADKARVOKKALIGAGANIGA    GOLLA     GOUDA     GOUDA/GOWDAGOWNDER   HINDUSADRU/SADARU/SADUMATA/SADKULA/SADAR/SADUGOWDA/SADUGOWDAR/SADAR/SADARI/SADARAGOWDAJOGI      KAIKOLAN/SENGUNDHARKAPU      KORAMA    KSHATRIYA/KSHATRIKSHATRIYAMARATHAKUMBARA   KUNCHITIGAKURUBA    KURUHINASETTYLAMBANI   LINGAYAT/VEERASHAIVA-VEERASHAIVAPANCHAMASALILINGAYATAAGASALINGAYATAPANCHALAMADIGA    MADIVALA  MALA      MALERU    MARATAMARATHAMUSLIM    NADAR     NAIDU     NAN       NAYAKA    NAYAR     PADMASALE/PADMASHALI/PADMASALIPANCHAL   PHULARI   POOJARI   RAJAPUT   RAMAKSHATRIYAREDDY     REDDY(BALIJA)SADARAGOWDASETTYBALIJA/SETTYBANAJIGA/BANAJIGASETTYTHIGALA   THOGATA/THOGATARU/THOGATIGA/THOGATAVEERA/THOGATAGERA/THOGATAVEERAKSHATRAIYA/THOGAJAPUSHPANJALITIGALA    UPPARA    VAISHNAVA VAKKALIGA VALMIKI   VANNIAR   VEERASHAIVALINGAYATVISHWAKARMAVOKKALIGA YADAV     YADAVA    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Female    0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+Male      0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total     0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+
+Out of Total, Students Passed with 60% or above:
+
+          ACHARI    ADIDRAVIDAADIKARNATAKAAGASA     ARYAVYSYA BAJANTHRI BALAJIGA/BANAJIGA/GOUDABANAJIGABALAJIGA/BANAJIGA/GOWDABANAJIGABALIJA    BANJARA   BESTHA    BESTHAR   BHAVASARAKSHATRIYABHOVI     BILLAVA   BRAHMIN   BUNT/BANT CHRISTIAN DASVOKKALIGADEVADIGA  DEVANGA   EDIGA     EZHAVA    GANGADKARVOKKALIGAGANIGA    GOLLA     GOUDA     GOUDA/GOWDAGOWNDER   HINDUSADRU/SADARU/SADUMATA/SADKULA/SADAR/SADUGOWDA/SADUGOWDAR/SADAR/SADARI/SADARAGOWDAJOGI      KAIKOLAN/SENGUNDHARKAPU      KORAMA    KSHATRIYA/KSHATRIKSHATRIYAMARATHAKUMBARA   KUNCHITIGAKURUBA    KURUHINASETTYLAMBANI   LINGAYAT/VEERASHAIVA-VEERASHAIVAPANCHAMASALILINGAYATAAGASALINGAYATAPANCHALAMADIGA    MADIVALA  MALA      MALERU    MARATAMARATHAMUSLIM    NADAR     NAIDU     NAN       NAYAKA    NAYAR     PADMASALE/PADMASHALI/PADMASALIPANCHAL   PHULARI   POOJARI   RAJAPUT   RAMAKSHATRIYAREDDY     REDDY(BALIJA)SADARAGOWDASETTYBALIJA/SETTYBANAJIGA/BANAJIGASETTYTHIGALA   THOGATA/THOGATARU/THOGATIGA/THOGATAVEERA/THOGATAGERA/THOGATAVEERAKSHATRAIYA/THOGAJAPUSHPANJALITIGALA    UPPARA    VAISHNAVA VAKKALIGA VALMIKI   VANNIAR   VEERASHAIVALINGAYATVISHWAKARMAVOKKALIGA YADAV     YADAVA    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Female    0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+Male      0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total     0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+
+==========================================================================
+
+
+================ V. CENTUM ACHIEVERS ================
+
+Sl.No   Name                     Registration No.    Total Marks                        
+----------------------------------------------------------------------------------------
+No centum achievers found.
+
+=====================================================
+

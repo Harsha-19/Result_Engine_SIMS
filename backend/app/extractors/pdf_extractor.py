@@ -8,6 +8,10 @@ from app.services.performance_utils import measure_performance, logger
 USN_PATTERN = re.compile(r"(U\d{2}[A-Z]{2}\d{2}S\d{4})")
 NAME_PATTERN = re.compile(r"Student Name:\s*(.+)")
 
+# Independent patterns for SGPA and CGPA
+SGPA_PATTERN = re.compile(r"SGPA\s*[:=]?\s*([\d\.]+)", re.IGNORECASE)
+CGPA_PATTERN = re.compile(r"CGPA\s*[:=]?\s*([\d\.]+)", re.IGNORECASE)
+
 # Correct subject pattern for extraction
 SUBJECT_PARSE_PATTERN = re.compile(r"([A-Z0-9\-\/]+)\s+([A-Z &\-/]+?)\s+(\d+)\s*\+\s*(\d+)\s+0\s+(\d+)\s+(\d+)")
 
@@ -56,6 +60,21 @@ def extract_pdf_data(pdf_path):
                 student.name = raw_line
         else:
             student.name = "Unknown Student"
+            
+        # --- Independent SGPA / CGPA Extraction ---
+        sgpa_match = SGPA_PATTERN.search(block)
+        if sgpa_match:
+            try:
+                student.sgpa = float(sgpa_match.group(1))
+            except ValueError:
+                pass
+
+        cgpa_match = CGPA_PATTERN.search(block)
+        if cgpa_match:
+            try:
+                student.cgpa = float(cgpa_match.group(1))
+            except ValueError:
+                pass
 
         # --- Efficient Subject + Marks Extraction ---
         # Single-pass regex parsing
@@ -69,7 +88,6 @@ def extract_pdf_data(pdf_path):
             )
 
         # Finalize student data
-        student.calculate_totals()
         student.calculate_result()
         students.append(student)
 

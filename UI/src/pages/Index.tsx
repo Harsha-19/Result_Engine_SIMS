@@ -304,6 +304,9 @@ const Index = () => {
 
       if (data.rankers) setTopPerformers(data.rankers);
       if (data.subjects) {
+        console.log("========== FRONTEND: SUBJECTS FROM BACKEND ==========");
+        console.log(`Received: ${data.subjects.length} subjects`);
+        console.log(data.subjects);
         setSubjects(data.subjects);
         setSubjectMeta(
           data.subjects.map((s: any) => ({
